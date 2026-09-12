@@ -1,0 +1,1 @@
+EAR_THRESHOLD = 0.10

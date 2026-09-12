@@ -216,3 +216,7 @@ __marimo__/
 
 # Streamlit
 .streamlit/secrets.toml
+
+# Eye detection local test data
+ai/eye_detection/data/test_eye.mp4
+ai/eye_detection/data/ear_test.csv
