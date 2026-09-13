@@ -25,7 +25,7 @@ options = FaceLandmarkerOptions(
         model_asset_path=MODEL_PATH
     ),
     running_mode=RunningMode.VIDEO,
-    num_faces=1
+    num_faces=10
 )
 
 if SOURCE == "camera":
@@ -87,117 +87,89 @@ with FaceLandmarker.create_from_options(options) as landmarker:
         )
 
         if result.face_landmarks:
-            face_landmarks = result.face_landmarks[0]
 
             height, width, _ = frame.shape
 
-            left_eye_points = get_eye_points(
-                face_landmarks,
-                LEFT_EYE,
-                width,
-                height
-            )
+            for face_id, face_landmarks in enumerate(result.face_landmarks):
 
-            right_eye_points = get_eye_points(
-                face_landmarks,
-                RIGHT_EYE,
-                width,
-                height
-            )
+                left_eye_points = get_eye_points(
+                    face_landmarks,
+                    LEFT_EYE,
+                    width,
+                    height
+                )
 
-            left_ear = calculate_ear(left_eye_points)
-            right_ear = calculate_ear(right_eye_points)
+                right_eye_points = get_eye_points(
+                    face_landmarks,
+                    RIGHT_EYE,
+                    width,
+                    height
+                )
 
-            avg_ear = (left_ear + right_ear) / 2.0
+                left_ear = calculate_ear(left_eye_points)
+                right_ear = calculate_ear(right_eye_points)
 
-            eye_closed = avg_ear < EAR_THRESHOLD
+                avg_ear = (left_ear + right_ear) / 2.0
 
-            if eye_closed:
-                eye_state = "CLOSED"
-            else:
-                eye_state = "OPEN"
+                eye_closed = avg_ear < EAR_THRESHOLD
 
-            # Vẽ 6 landmark của mắt trái
-            for index in LEFT_EYE:
-                landmark = face_landmarks[index]
+                if eye_closed:
+                    eye_state = "CLOSED"
+                else:
+                    eye_state = "OPEN"
 
-                x = int(landmark.x * width)
-                y = int(landmark.y * height)
+                # Vẽ landmark mắt trái
+                for index in LEFT_EYE:
+                    landmark = face_landmarks[index]
 
-                cv2.circle(
+                    x = int(landmark.x * width)
+                    y = int(landmark.y * height)
+
+                    cv2.circle(
+                        frame,
+                        (x, y),
+                        4,
+                        (0, 255, 0),
+                        -1
+                    )
+
+                # Vẽ landmark mắt phải
+                for index in RIGHT_EYE:
+                    landmark = face_landmarks[index]
+
+                    x = int(landmark.x * width)
+                    y = int(landmark.y * height)
+
+                    cv2.circle(
+                        frame,
+                        (x, y),
+                        4,
+                        (0, 0, 255),
+                        -1
+                    )
+
+                # Hiển thị trạng thái từng khuôn mặt
+                text_y = 40 + face_id * 40
+
+                cv2.putText(
                     frame,
-                    (x, y),
-                    4,
+                    f"Face {face_id}: {eye_state} | EAR: {avg_ear:.3f}",
+                    (20, text_y),
+                    cv2.FONT_HERSHEY_SIMPLEX,
+                    0.7,
                     (0, 255, 0),
-                    -1
+                    2
                 )
-
-
-            # Vẽ 6 landmark của mắt phải
-            for index in RIGHT_EYE:
-                landmark = face_landmarks[index]
-
-                x = int(landmark.x * width)
-                y = int(landmark.y * height)
-
-                cv2.circle(
-                    frame,
-                    (x, y),
-                    4,
-                    (0, 0, 255),
-                    -1
-                )
-            
-            # Hiển thị EAR
-            cv2.putText(
-                frame,
-                f"Left EAR: {left_ear:.3f}",
-                (20, 40),
-                cv2.FONT_HERSHEY_SIMPLEX,
-                0.7,
-                (0, 255, 0),
-                2
-            )
-
-            cv2.putText(
-                frame,
-                f"Right EAR: {right_ear:.3f}",
-                (20, 70),
-                cv2.FONT_HERSHEY_SIMPLEX,
-                0.7,
-                (0, 255, 0),
-                2
-            )
-
-            cv2.putText(
-                frame,
-                f"Avg EAR: {avg_ear:.3f}",
-                (20, 100),
-                cv2.FONT_HERSHEY_SIMPLEX,
-                0.7,
-                (0, 255, 255),
-                2
-            )
-
-            cv2.putText(
-                frame,
-                f"Eye State: {eye_state}",
-                (20, 140),
-                cv2.FONT_HERSHEY_SIMPLEX,
-                0.8,
-                (0, 255, 0),
-                2
-            )
 
         else:
             cv2.putText(
-            frame,
-            "Eye State: UNKNOWN",
-            (20, 140),
-            cv2.FONT_HERSHEY_SIMPLEX,
-            0.8,
-            (0, 255, 255),
-            2
+                frame,
+                "No face detected",
+                (20, 40),
+                cv2.FONT_HERSHEY_SIMPLEX,
+                0.8,
+                (0, 255, 255),
+                2
             )
 
             print("No face detected.")
