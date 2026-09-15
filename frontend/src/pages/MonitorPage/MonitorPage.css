@@ -1,0 +1,325 @@
+/* ─── Root ──────────────────────────────────────────────────────────────────── */
+.monitor-page {
+  min-height: 100vh;
+  background: #f0f4f8;
+  display: flex;
+  flex-direction: column;
+  font-family: 'Inter', system-ui, sans-serif;
+}
+
+/* ─── Topbar ────────────────────────────────────────────────────────────────── */
+.monitor-page__topbar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0 24px;
+  height: 56px;
+  background: #ffffff;
+  border-bottom: 1px solid #e2e8f0;
+  flex-shrink: 0;
+}
+
+.monitor-page__topbar-left {
+  display: flex;
+  align-items: center;
+  gap: 32px;
+}
+
+.monitor-page__logo {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 1rem;
+  font-weight: 800;
+  letter-spacing: 0.06em;
+  color: #0f172a;
+}
+
+.monitor-page__logo svg {
+  width: 26px;
+  height: 26px;
+  color: #3b82f6;
+}
+
+.monitor-page__nav {
+  display: flex;
+  gap: 4px;
+}
+
+.monitor-page__nav-link {
+  padding: 5px 14px;
+  border-radius: 20px;
+  font-size: 0.83rem;
+  font-weight: 500;
+  color: #64748b;
+  text-decoration: none;
+  transition: all 0.15s;
+  border: 1px solid transparent;
+}
+
+.monitor-page__nav-link:hover {
+  color: #0f172a;
+  background: #f1f5f9;
+}
+
+.monitor-page__nav-link--active {
+  background: #f1f5f9;
+  border-color: #e2e8f0;
+  color: #0f172a;
+  font-weight: 600;
+}
+
+.monitor-page__topbar-right {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.monitor-page__icon-btn {
+  width: 36px;
+  height: 36px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border: 1px solid #e2e8f0;
+  border-radius: 8px;
+  background: #f8fafc;
+  color: #64748b;
+  cursor: pointer;
+  transition: all 0.15s;
+}
+
+.monitor-page__icon-btn svg {
+  width: 18px;
+  height: 18px;
+}
+
+.monitor-page__icon-btn:hover {
+  background: #f1f5f9;
+  color: #0f172a;
+}
+
+.monitor-page__user {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.monitor-page__user-info {
+  text-align: right;
+}
+
+.monitor-page__user-name {
+  display: block;
+  font-size: 0.82rem;
+  font-weight: 600;
+  color: #0f172a;
+  line-height: 1.2;
+}
+
+.monitor-page__user-room {
+  display: block;
+  font-size: 0.73rem;
+  color: #64748b;
+}
+
+.monitor-page__avatar {
+  width: 34px;
+  height: 34px;
+  border-radius: 50%;
+  background: linear-gradient(135deg, #3b82f6, #6366f1);
+  color: #fff;
+  font-size: 0.75rem;
+  font-weight: 700;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  letter-spacing: 0.02em;
+  flex-shrink: 0;
+}
+
+/* ─── Session Banner ────────────────────────────────────────────────────────── */
+.monitor-page__session-banner {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 10px 24px;
+  background: #ffffff;
+  border-bottom: 1px solid #e2e8f0;
+  flex-shrink: 0;
+}
+
+.monitor-page__session-left {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+}
+
+.monitor-page__room-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  background: #fee2e2;
+  color: #dc2626;
+  font-size: 0.78rem;
+  font-weight: 700;
+  padding: 4px 12px;
+  border-radius: 20px;
+  letter-spacing: 0.05em;
+}
+
+.monitor-page__room-dot {
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  background: #ef4444;
+  animation: pulse-dot 1.5s infinite;
+}
+
+@keyframes pulse-dot {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.3; }
+}
+
+.monitor-page__session-time {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 0.82rem;
+  color: #64748b;
+}
+
+.monitor-page__session-time svg {
+  width: 14px;
+  height: 14px;
+  color: #94a3b8;
+}
+
+.monitor-page__session-right {
+  display: flex;
+  gap: 8px;
+}
+
+.monitor-page__session-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 5px 14px;
+  border-radius: 8px;
+  border: 1px solid #e2e8f0;
+  background: #f8fafc;
+  color: #64748b;
+  font-size: 0.8rem;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.15s;
+}
+
+.monitor-page__session-btn svg {
+  width: 12px;
+  height: 12px;
+}
+
+.monitor-page__session-btn:hover {
+  background: #f1f5f9;
+  color: #0f172a;
+}
+
+.monitor-page__session-btn--active {
+  background: #eff6ff;
+  border-color: #93c5fd;
+  color: #1d4ed8;
+  font-weight: 600;
+}
+
+/* ─── Main layout ───────────────────────────────────────────────────────────── */
+.monitor-page__main {
+  flex: 1;
+  display: grid;
+  grid-template-columns: 1fr 340px;
+  gap: 20px;
+  padding: 20px 24px;
+  max-width: 1400px;
+  width: 100%;
+  margin: 0 auto;
+  box-sizing: border-box;
+}
+
+/* ─── Left: Camera panel ────────────────────────────────────────────────────── */
+.monitor-page__left {
+  min-width: 0;
+}
+
+.monitor-page__camera-panel {
+  background: #ffffff;
+  border-radius: 16px;
+  box-shadow:
+    0 0 0 1px rgba(0, 0, 0, 0.06),
+    0 4px 16px rgba(0, 0, 0, 0.07);
+  overflow: hidden;
+}
+
+.monitor-page__camera-header {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 10px 14px;
+  background: #0f172a;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.06);
+}
+
+.monitor-page__rec-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  background: rgba(239, 68, 68, 0.15);
+  border: 1px solid rgba(239, 68, 68, 0.3);
+  color: #ef4444;
+  font-size: 0.7rem;
+  font-weight: 800;
+  padding: 2px 8px;
+  border-radius: 4px;
+  letter-spacing: 0.08em;
+}
+
+.monitor-page__rec-dot {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: #ef4444;
+  animation: pulse-dot 1s infinite;
+}
+
+.monitor-page__live-label {
+  font-size: 0.75rem;
+  font-weight: 600;
+  color: #94a3b8;
+  letter-spacing: 0.04em;
+}
+
+.monitor-page__clock {
+  margin-left: auto;
+  font-size: 0.75rem;
+  color: #64748b;
+  font-variant-numeric: tabular-nums;
+  font-family: 'JetBrains Mono', monospace;
+}
+
+/* ─── Right: Alerts panel ───────────────────────────────────────────────────── */
+.monitor-page__right {
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+}
+
+/* ─── Responsive ────────────────────────────────────────────────────────────── */
+@media (max-width: 900px) {
+  .monitor-page__main {
+    grid-template-columns: 1fr;
+    grid-template-rows: auto auto;
+  }
+
+  .monitor-page__right {
+    max-height: 400px;
+  }
+}

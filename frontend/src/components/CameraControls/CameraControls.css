@@ -1,0 +1,150 @@
+.cam-controls {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  padding: 14px 16px;
+  background: #ffffff;
+  border-radius: 0 0 16px 16px;
+  border-top: 1px solid #e2e8f0;
+}
+
+/* Nhóm nút chính */
+.cam-controls__buttons {
+  display: flex;
+  gap: 10px;
+  align-items: center;
+  flex-wrap: wrap;
+}
+
+/* Base button */
+.cam-controls__btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  padding: 9px 20px;
+  border: none;
+  border-radius: 8px;
+  font-size: 0.82rem;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  cursor: pointer;
+  transition: opacity 0.15s, transform 0.1s, box-shadow 0.15s;
+  white-space: nowrap;
+}
+
+.cam-controls__btn svg {
+  width: 16px;
+  height: 16px;
+  flex-shrink: 0;
+}
+
+.cam-controls__btn:disabled {
+  opacity: 0.45;
+  cursor: not-allowed;
+  transform: none !important;
+}
+
+.cam-controls__btn:not(:disabled):hover {
+  transform: translateY(-1px);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+}
+
+.cam-controls__btn:not(:disabled):active {
+  transform: translateY(0);
+}
+
+/* Nút BẮT ĐẦU */
+.cam-controls__btn--start {
+  background: #3b82f6;
+  color: #ffffff;
+}
+
+.cam-controls__btn--start.cam-controls__btn--active {
+  background: #16a34a;
+}
+
+/* Nút DỪNG */
+.cam-controls__btn--stop {
+  background: #f1f5f9;
+  color: #475569;
+  border: 1px solid #e2e8f0;
+}
+
+.cam-controls__btn--stop:not(:disabled):hover {
+  background: #fee2e2;
+  color: #dc2626;
+  border-color: #fca5a5;
+}
+
+/* Nhóm nút chọn camera */
+.cam-controls__cams {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.cam-controls__cam-btn {
+  padding: 5px 14px;
+  border-radius: 20px;
+  border: 1.5px solid #e2e8f0;
+  background: #f8fafc;
+  color: #64748b;
+  font-size: 0.78rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.15s;
+}
+
+.cam-controls__cam-btn:hover {
+  border-color: #93c5fd;
+  color: #3b82f6;
+  background: #eff6ff;
+}
+
+.cam-controls__cam-btn--active {
+  background: #dbeafe;
+  border-color: #3b82f6;
+  color: #1d4ed8;
+}
+
+/* Thanh trạng thái */
+.cam-controls__status-bar {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.cam-controls__status-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: #cbd5e1;
+  flex-shrink: 0;
+}
+
+.cam-controls__status-dot--on {
+  background: #22c55e;
+  box-shadow: 0 0 0 3px rgba(34, 197, 94, 0.2);
+  animation: pulse-green 2s infinite;
+}
+
+@keyframes pulse-green {
+  0%, 100% { box-shadow: 0 0 0 3px rgba(34, 197, 94, 0.2); }
+  50% { box-shadow: 0 0 0 6px rgba(34, 197, 94, 0.05); }
+}
+
+.cam-controls__status-text {
+  font-size: 0.76rem;
+  color: #64748b;
+}
+
+/* Lỗi */
+.cam-controls__error {
+  font-size: 0.78rem;
+  color: #dc2626;
+  background: #fef2f2;
+  border: 1px solid #fca5a5;
+  border-radius: 6px;
+  padding: 6px 10px;
+  margin: 0;
+}

@@ -1,0 +1,380 @@
+/* ─── Violation Log Container ────────────────────────────────────────────────── */
+.vlog {
+  background: #ffffff;
+  border-radius: 16px;
+  box-shadow:
+    0 0 0 1px rgba(0, 0, 0, 0.05),
+    0 4px 16px rgba(0, 0, 0, 0.06);
+  overflow: hidden;
+}
+
+/* ─── Header ────────────────────────────────────────────────────────────────── */
+.vlog__header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 16px 24px;
+  border-bottom: 1px solid #f1f5f9;
+}
+
+.vlog__title-area {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.vlog__title-icon { font-size: 1rem; }
+
+.vlog__title {
+  font-size: 0.9rem;
+  font-weight: 800;
+  color: #0f172a;
+  letter-spacing: 0.04em;
+  margin: 0;
+}
+
+.vlog__count-badge {
+  background: #eff6ff;
+  color: #1d4ed8;
+  font-size: 0.72rem;
+  font-weight: 700;
+  padding: 3px 10px;
+  border-radius: 20px;
+  border: 1px solid #bfdbfe;
+}
+
+.vlog__filter-btn {
+  width: 34px;
+  height: 34px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border: 1px solid #e2e8f0;
+  border-radius: 8px;
+  background: #f8fafc;
+  color: #64748b;
+  cursor: pointer;
+  transition: all 0.15s;
+}
+
+.vlog__filter-btn svg { width: 15px; height: 15px; }
+.vlog__filter-btn:hover { background: #f1f5f9; color: #334155; }
+
+/* ─── Body ──────────────────────────────────────────────────────────────────── */
+.vlog__body {
+  display: flex;
+  flex-direction: column;
+  gap: 0;
+}
+
+/* ─── States ────────────────────────────────────────────────────────────────── */
+.vlog__loading,
+.vlog__error,
+.vlog__empty {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  padding: 48px 24px;
+  color: #94a3b8;
+  font-size: 0.85rem;
+  flex-direction: column;
+}
+
+.vlog__loading svg,
+.vlog__error svg,
+.vlog__empty svg { width: 36px; height: 36px; opacity: 0.5; }
+
+.vlog__spinner {
+  width: 28px;
+  height: 28px;
+  border: 3px solid #e2e8f0;
+  border-top-color: #3b82f6;
+  border-radius: 50%;
+  animation: spin 0.7s linear infinite;
+}
+
+@keyframes spin { to { transform: rotate(360deg); } }
+
+.vlog__error { color: #ef4444; }
+
+/* ─── Violation Card ────────────────────────────────────────────────────────── */
+.vlog-card {
+  display: grid;
+  grid-template-columns: 1fr 220px;
+  gap: 0;
+  border-bottom: 1px solid #f1f5f9;
+  transition: background 0.15s;
+}
+
+.vlog-card:last-child { border-bottom: none; }
+.vlog-card:hover { background: #fafbfc; }
+
+/* Left */
+.vlog-card__left {
+  padding: 18px 24px;
+  border-right: 1px solid #f1f5f9;
+}
+
+.vlog-card__top-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 6px;
+}
+
+.vlog-card__badge {
+  display: inline-flex;
+  align-items: center;
+  font-size: 0.7rem;
+  font-weight: 700;
+  background: #fee2e2;
+  color: #dc2626;
+  padding: 2px 10px;
+  border-radius: 20px;
+}
+
+.vlog-card__time {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  font-size: 0.75rem;
+  color: #94a3b8;
+  font-variant-numeric: tabular-nums;
+}
+
+.vlog-card__time svg { width: 12px; height: 12px; }
+
+.vlog-card__student {
+  font-size: 0.75rem;
+  color: #64748b;
+  margin: 0 0 5px;
+}
+
+.vlog-card__type {
+  font-size: 0.88rem;
+  font-weight: 700;
+  color: #0f172a;
+  margin: 0 0 10px;
+}
+
+.vlog-card__metrics {
+  display: flex;
+  gap: 24px;
+  margin-bottom: 6px;
+}
+
+.vlog-card__metric-pair {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.vlog-card__metric-label {
+  font-size: 0.75rem;
+  color: #94a3b8;
+}
+
+.vlog-card__metric-val {
+  font-size: 0.82rem;
+  font-weight: 700;
+  color: #0f172a;
+}
+
+.vlog-card__metric-val--red { color: #ef4444; }
+
+.vlog-card__confidence {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+/* Right: Snapshot */
+.vlog-card__snapshot {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  background: #f8fafc;
+  border: none;
+  cursor: pointer;
+  overflow: hidden;
+  transition: background 0.2s;
+  min-height: 130px;
+}
+
+.vlog-card__snapshot:hover {
+  background: #eff6ff;
+}
+
+.vlog-card__snapshot-img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  position: absolute;
+  inset: 0;
+  opacity: 0.7;
+  transition: opacity 0.2s;
+}
+
+.vlog-card__snapshot:hover .vlog-card__snapshot-img { opacity: 0.9; }
+
+.vlog-card__snapshot-overlay {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: #cbd5e1;
+}
+
+.vlog-card__snapshot-overlay svg { width: 40px; height: 40px; }
+
+.vlog-card__snapshot-label {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 0.78rem;
+  font-weight: 600;
+  color: #3b82f6;
+  position: relative;
+  z-index: 1;
+  margin-top: 8px;
+}
+
+.vlog-card__snapshot-label svg { width: 14px; height: 14px; }
+
+/* ─── Pagination ────────────────────────────────────────────────────────────── */
+.vlog-pagination {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  padding: 16px 24px;
+  border-top: 1px solid #f1f5f9;
+  flex-wrap: wrap;
+}
+
+.vlog-pagination__btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  padding: 7px 14px;
+  border: 1.5px solid #e2e8f0;
+  border-radius: 8px;
+  background: #f8fafc;
+  color: #475569;
+  font-size: 0.8rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.15s;
+}
+
+.vlog-pagination__btn svg { width: 14px; height: 14px; }
+.vlog-pagination__btn:disabled { opacity: 0.4; cursor: not-allowed; }
+.vlog-pagination__btn:not(:disabled):hover { background: #f1f5f9; border-color: #94a3b8; }
+
+.vlog-pagination__pages {
+  display: flex;
+  gap: 4px;
+}
+
+.vlog-pagination__page {
+  width: 34px;
+  height: 34px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border: 1.5px solid #e2e8f0;
+  border-radius: 8px;
+  background: #f8fafc;
+  color: #475569;
+  font-size: 0.82rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.15s;
+}
+
+.vlog-pagination__page:hover { background: #f1f5f9; border-color: #94a3b8; }
+.vlog-pagination__page--active {
+  background: #3b82f6;
+  border-color: #3b82f6;
+  color: #ffffff;
+}
+
+/* ─── Modal ─────────────────────────────────────────────────────────────────── */
+.vlog-modal__backdrop {
+  position: fixed;
+  inset: 0;
+  z-index: 1000;
+  background: rgba(0, 0, 0, 0.6);
+  backdrop-filter: blur(4px);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 20px;
+  animation: fade-in 0.15s ease-out;
+}
+
+@keyframes fade-in { from { opacity: 0; } to { opacity: 1; } }
+
+.vlog-modal {
+  background: #fff;
+  border-radius: 16px;
+  width: 100%;
+  max-width: 560px;
+  box-shadow: 0 24px 48px rgba(0, 0, 0, 0.25);
+  overflow: hidden;
+  animation: modal-up 0.2s ease-out;
+}
+
+@keyframes modal-up {
+  from { opacity: 0; transform: scale(0.95) translateY(10px); }
+  to   { opacity: 1; transform: scale(1) translateY(0); }
+}
+
+.vlog-modal__header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  padding: 18px 20px 14px;
+  border-bottom: 1px solid #f1f5f9;
+}
+
+.vlog-modal__title { font-size: 1rem; font-weight: 700; color: #0f172a; margin: 0 0 3px; }
+.vlog-modal__sub   { font-size: 0.78rem; color: #64748b; margin: 0; }
+
+.vlog-modal__close {
+  width: 32px; height: 32px;
+  display: flex; align-items: center; justify-content: center;
+  border: 1px solid #e2e8f0;
+  border-radius: 8px;
+  background: #f8fafc;
+  color: #64748b;
+  cursor: pointer;
+  transition: all 0.15s;
+  flex-shrink: 0;
+}
+
+.vlog-modal__close svg { width: 15px; height: 15px; }
+.vlog-modal__close:hover { background: #fee2e2; color: #dc2626; border-color: #fca5a5; }
+
+.vlog-modal__body {
+  background: #0a0e1a;
+  max-height: 380px;
+  display: flex; align-items: center; justify-content: center; overflow: hidden;
+}
+
+.vlog-modal__img { width: 100%; max-height: 380px; object-fit: contain; display: block; }
+
+.vlog-modal__footer {
+  display: flex; align-items: center; gap: 16px;
+  padding: 14px 20px;
+  border-top: 1px solid #f1f5f9;
+  font-size: 0.8rem; color: #64748b;
+}
+
+.vlog-modal__badge {
+  font-size: 0.72rem; font-weight: 700;
+  background: #fee2e2; color: #dc2626;
+  padding: 2px 10px; border-radius: 20px;
+}

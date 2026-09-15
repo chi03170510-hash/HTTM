@@ -2,7 +2,7 @@ import asyncio
 from fastapi import APIRouter, HTTPException
 from schemas.violation import CameraStatusResponse
 from services.camera_service import camera_service
-from config import CAMERA_INDEX, MODEL_PATH
+from config import CAMERA_SOURCE, MODEL_PATH
 from database import SessionLocal
 
 router = APIRouter()
@@ -16,7 +16,7 @@ async def start_camera():
     try:
         loop = asyncio.get_running_loop()
         camera_service.start(
-            camera_source=CAMERA_INDEX,
+            camera_source=CAMERA_SOURCE,
             model_path=MODEL_PATH,
             db_session_factory=SessionLocal,
             loop=loop,
