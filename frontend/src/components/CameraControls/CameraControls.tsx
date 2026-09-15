@@ -28,7 +28,7 @@ export const CameraControls = () => {
       setCameraActive(true);
     } catch (err: any) {
       const detail = err?.response?.data?.detail ?? 'Không thể bắt đầu camera';
-      setErrorMsg(detail);
+      setErrorMsg(`Lỗi: ${detail}`);
     }
   };
 
@@ -39,7 +39,7 @@ export const CameraControls = () => {
       setCameraActive(false);
     } catch (err: any) {
       const detail = err?.response?.data?.detail ?? 'Không thể dừng camera';
-      setErrorMsg(detail);
+      setErrorMsg(`Lỗi: ${detail}`);
     }
   };
 

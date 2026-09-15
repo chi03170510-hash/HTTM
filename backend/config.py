@@ -14,7 +14,13 @@ DB_NAME = os.getenv("DB_NAME", "httm")
 
 DATABASE_URL = f"mysql+pymysql://{DB_USER}:{DB_PASSWORD}@{DB_HOST}:{DB_PORT}/{DB_NAME}?charset=utf8mb4"
 
-CAMERA_INDEX = int(os.getenv("CAMERA_INDEX", 0))
+# Lấy giá trị CAMERA_SOURCE từ .env (có thể là số 0 cho webcam hoặc đường dẫn file video)
+camera_env = os.getenv("CAMERA_SOURCE", "0").strip()
+# Nếu là số nguyên thì chuyển sang int (cho webcam), nếu không thì giữ nguyên chuỗi (cho file video hoặc luồng RTSP)
+if camera_env.isdigit():
+    CAMERA_SOURCE = int(camera_env)
+else:
+    CAMERA_SOURCE = camera_env
 
 raw_model_path = os.getenv("MODEL_PATH", "../ai/eye_detection/models/face_landmarker.task")
 if os.path.isabs(raw_model_path):
