@@ -172,7 +172,7 @@ export const CameraFeed = () => {
           <>
             <img
               ref={imgRef}
-              src="/api/video/stream"
+              src="/api/camera/video_feed"
               alt="Camera stream"
               className="camera-feed__video"
               onError={() => console.error('MJPEG stream error')}
