@@ -220,3 +220,7 @@ __marimo__/
 # Eye detection local test data
 ai/eye_detection/data/test_eye.mp4
 ai/eye_detection/data/ear_test.csv
+
+# Uploaded images & snapshots
+backend/uploads/*
+!backend/uploads/violations/.gitkeep
