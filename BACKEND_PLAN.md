@@ -868,7 +868,7 @@ pip install -r requirements.txt
 # 3. Cấu hình .env (sửa DB_PASSWORD)
 
 # 4. Chạy backend
-uvicorn main:app --reload --host 0.0.0.0 --port 8000
+uvicorn main:app --reload --host 127.0.0.1 --port 8000
 
 # 5. Truy cập Swagger
 # http://localhost:8000/docs

@@ -70,7 +70,7 @@ class CameraService:
 
             cap = cv2.VideoCapture(source)
             if not cap.isOpened():
-                logger.warning(f"Không thể mở nguồn camera chính: {source}. Đang thử webcam mặc định (0)...")
+                logger.warning(f"Không thể mở camera index {source}. Đang thử webcam mặc định (0)...")
                 cap.release()
                 cap = cv2.VideoCapture(0)
                 

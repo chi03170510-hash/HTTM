@@ -1,21 +1,15 @@
 import cv2
 import time
 
-URL = "http://192.168.1.3:4747/video"
+CAMERA_INDEX = 0
 
 print("=" * 60)
-print(f"Test đọc HTTP stream: {URL}")
+print(f"Test webcam vật lý, camera index: {CAMERA_INDEX}")
 print("=" * 60)
 
-# Thử với FFmpeg backend
-print("\n[Thử 1] CAP_FFMPEG...")
-cap = cv2.VideoCapture(URL, cv2.CAP_FFMPEG)
+print("\n[Thử] Camera index 0...")
+cap = cv2.VideoCapture(CAMERA_INDEX)
 print(f"  isOpened: {cap.isOpened()}")
-
-if not cap.isOpened():
-    print("\n[Thử 2] Backend mặc định...")
-    cap = cv2.VideoCapture(URL)
-    print(f"  isOpened: {cap.isOpened()}")
 
 if cap.isOpened():
     print("\n✅ Mở thành công! Đọc thử 10 frame...")
@@ -33,7 +27,6 @@ if cap.isOpened():
 else:
     print("\n❌ Không mở được stream!")
     print("\nChecklist:")
-    print("  1. DroidCam Client đã TẮT hẳn chưa? (kiểm tra system tray)")
-    print("  2. Tab Chrome đã đóng chưa?")
-    print("  3. URL http://192.168.1.3:4747/video có mở được trên Chrome không?")
-    print("  4. Điện thoại và PC cùng WiFi?")
+    print("  1. Webcam vật lý đã được kết nối chưa?")
+    print("  2. Ứng dụng khác có đang chiếm camera không?")
+    print("  3. Windows đã cấp quyền camera cho Python chưa?")
