@@ -224,3 +224,4 @@ ai/eye_detection/data/ear_test.csv
 # Uploaded images & snapshots
 backend/uploads/*
 !backend/uploads/violations/.gitkeep
+node_modules/

@@ -3,6 +3,7 @@ from datetime import datetime, date, time as dt_time, timedelta
 from typing import Optional
 from fastapi import APIRouter, Depends, HTTPException, Query
 from fastapi.responses import FileResponse
+from sqlalchemy import func
 from sqlalchemy.orm import Session
 
 from database import get_db
@@ -75,12 +76,20 @@ def get_violation_stats(db: Session = Depends(get_db)):
     total_this_week = db.query(Violation).filter(Violation.created_at >= start_of_week).count()
     total_this_month = db.query(Violation).filter(Violation.created_at >= start_of_month).count()
     total_all = db.query(Violation).count()
+    duration_stats = db.query(
+        func.min(Violation.duration),
+        func.max(Violation.duration),
+        func.avg(Violation.duration),
+    ).one()
 
     return StatsResponse(
         total_today=total_today,
         total_this_week=total_this_week,
         total_this_month=total_this_month,
         total_all=total_all,
+        min_duration=float(duration_stats[0]) if duration_stats[0] is not None else None,
+        max_duration=float(duration_stats[1]) if duration_stats[1] is not None else None,
+        avg_duration=float(duration_stats[2]) if duration_stats[2] is not None else None,
     )
 
 

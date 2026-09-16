@@ -1,12 +1,10 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { useStartCamera, useStopCamera, useCameraStatus } from '../../hooks';
 import { useAppStore } from '../../store/useAppStore';
 import './CameraControls.css';
 
 const CAMERA_OPTIONS = [
-  'Cam 01 (Bàn 1-3)',
-  'Cam 02 (Bàn 4-6)',
-  'Cam 03 (Bàn 7-9)',
+  'Cam 01 ',
 ];
 
 export const CameraControls = () => {
@@ -20,6 +18,12 @@ export const CameraControls = () => {
   const stopCamera = useStopCamera();
 
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
+
+  useEffect(() => {
+    if (cameraStatus) {
+      setCameraActive(cameraStatus.is_running);
+    }
+  }, [cameraStatus, setCameraActive]);
 
   const handleStart = async () => {
     setErrorMsg(null);

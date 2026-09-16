@@ -31,6 +31,9 @@ class StatsResponse(BaseModel):
     total_this_week: int
     total_this_month: int
     total_all: int
+    min_duration: Optional[float] = None
+    max_duration: Optional[float] = None
+    avg_duration: Optional[float] = None
 
 
 class CameraStatusResponse(BaseModel):

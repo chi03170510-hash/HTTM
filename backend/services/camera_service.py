@@ -184,7 +184,7 @@ class CameraService:
                     continue
 
                 self.latest_result = result
-                now_dt = datetime.utcnow()
+                now_dt = datetime.now()
 
                 if result.get("faces_detected"):
                     for face in result.get("faces", []):

@@ -94,16 +94,10 @@ const ViolationCard = ({ violation, onViewSnapshot }: ViolationCardProps) => {
               {violation.duration.toFixed(1)}s
             </span>
           </div>
-          <div className="vlog-card__metric-pair">
-            <span className="vlog-card__metric-label">EAR:</span>
-            <span className="vlog-card__metric-val">0.081</span>
-          </div>
+          
         </div>
 
-        <div className="vlog-card__confidence">
-          <span className="vlog-card__metric-label">Độ tin cậy:</span>
-          <span className="vlog-card__metric-val">98.9%</span>
-        </div>
+       
       </div>
 
       {/* Right: Snapshot */}
@@ -193,7 +187,7 @@ const Pagination = ({ page, totalPages, onPageChange }: PaginationProps) => {
 };
 
 // ─── ViolationLog ──────────────────────────────────────────────────────────────
-const PAGE_SIZE = 5;
+const PAGE_SIZE = 20;
 
 interface ViolationLogProps {
   dateFrom?: string;

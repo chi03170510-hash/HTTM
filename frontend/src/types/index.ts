@@ -21,6 +21,9 @@ export interface Stats {
   total_this_week: number;
   total_this_month: number;
   total_all: number;
+  min_duration: number | null;
+  max_duration: number | null;
+  avg_duration: number | null;
 }
 
 export interface CameraStatus {

@@ -66,11 +66,11 @@ export const StatsCards = ({ onCameraFilter, activeCam }: StatsCardsProps) => {
   const uniqueFaces = allViolations
     ? new Set(allViolations.items.map((v) => v.face_id)).size
     : 0;
-  const avgDuration = allViolations?.items.length
-    ? allViolations.items.reduce((s, v) => s + v.duration, 0) / allViolations.items.length
-    : 0;
+  const avgDuration = stats?.avg_duration ?? 0;
+  const minDuration = stats?.min_duration ?? 0;
+  const maxDuration = stats?.max_duration ?? 0;
 
-  const cameras = ['Toàn cảnh', 'Cam 01 (Bàn 1-3)', 'Cam 02 (Bàn 4-6)'];
+  const cameras = [ 'Cam 01 '];
 
   const handleExport = (type: 'excel' | 'pdf') => {
     const violations = allViolations?.items ?? [];
@@ -137,7 +137,9 @@ export const StatsCards = ({ onCameraFilter, activeCam }: StatsCardsProps) => {
             {avgDuration.toFixed(1)}
             <span className="stats-card__unit"> giây</span>
           </div>
-          <p className="stats-card__footnote">Khoảng lọc: 5.0s - 12.0s</p>
+          <p className="stats-card__footnote">
+            Khoảng thời gian: {minDuration.toFixed(1)}s - {maxDuration.toFixed(1)}s
+          </p>
         </div>
       </div>
 

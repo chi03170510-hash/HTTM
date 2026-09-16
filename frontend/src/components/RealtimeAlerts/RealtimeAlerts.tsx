@@ -75,19 +75,10 @@ const AlertCard = ({ alert, isActive, onViewSnapshot }: AlertCardProps) => {
         <span className="alert-card__time">{time}</span>
       </div>
 
-      <p className="alert-card__name">Người {alert.face_id + 1} – Nhắm mắt liên tục</p>
-      <p className="alert-card__duration">Thời lượng nhắm: <strong>{alert.duration.toFixed(1)}s</strong></p>
-
-      <div className="alert-card__metrics">
-        <div className="alert-card__metric">
-          <span className="alert-card__metric-label">EAR</span>
-          <span className="alert-card__metric-value alert-card__metric-value--red">0.081</span>
-        </div>
-        <div className="alert-card__metric">
-          <span className="alert-card__metric-label">Độ tin cậy</span>
-          <span className="alert-card__metric-value">98.9%</span>
-        </div>
-        <button
+      <p style={{ color: '#dc2626' }} className="alert-card__name">Người {alert.face_id + 1} – Nhắm mắt liên tục</p>
+            <div className="alert-card__metrics">
+       
+         <button
           id={`btn-snapshot-${alert.violation_id}`}
           className="alert-card__snapshot-btn"
           onClick={() => onViewSnapshot(alert)}
