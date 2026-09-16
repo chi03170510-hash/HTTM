@@ -1,5 +1,7 @@
+import time
 import asyncio
 from fastapi import APIRouter, HTTPException
+from fastapi.responses import StreamingResponse
 from schemas.violation import CameraStatusResponse
 from services.camera_service import camera_service
 from config import CAMERA_SOURCE, MODEL_PATH
@@ -50,3 +52,26 @@ async def get_camera_status():
     status = camera_service.is_running
     msg = "Camera đang chạy" if status else "Camera chưa chạy"
     return CameraStatusResponse(is_running=status, message=msg)
+
+
+@router.get("/video_feed")
+def video_feed():
+    """MJPEG streaming endpoint for frontend."""
+    def frame_generator():
+        start_wait = time.time()
+        while not camera_service.is_running and (time.time() - start_wait) < 3.0:
+            time.sleep(0.1)
+
+        while camera_service.is_running:
+            frame_bytes = camera_service.get_jpeg_frame()
+            if frame_bytes is not None:
+                yield (
+                    b"--frame\r\n"
+                    b"Content-Type: image/jpeg\r\n\r\n" + frame_bytes + b"\r\n"
+                )
+            time.sleep(0.04)
+
+    return StreamingResponse(
+        frame_generator(),
+        media_type="multipart/x-mixed-replace; boundary=frame",
+    )

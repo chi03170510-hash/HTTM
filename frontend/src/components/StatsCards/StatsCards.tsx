@@ -1,4 +1,3 @@
-import { useState } from 'react';
 import * as XLSX from 'xlsx';
 import jsPDF from 'jspdf';
 import autoTable from 'jspdf-autotable';
@@ -6,11 +5,6 @@ import { useStats } from '../../hooks';
 import { useViolations } from '../../hooks';
 import type { Violation } from '../../types';
 import './StatsCards.css';
-
-const formatDuration = (sec: number) => {
-  if (sec >= 60) return `${(sec / 60).toFixed(1)} phút`;
-  return `${sec.toFixed(1)}s`;
-};
 
 // ─── Export utils ─────────────────────────────────────────────────────────────
 

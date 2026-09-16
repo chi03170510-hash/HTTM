@@ -34,6 +34,7 @@ class CameraService:
         self.eye_service: Optional[EyeDetectionService] = None
         self.thread: Optional[threading.Thread] = None
         self.latest_result: Optional[Dict[str, Any]] = None
+        self.latest_jpeg: Optional[bytes] = None
         self.websocket_connections: Set[Any] = set()
         self.db_session_factory = SessionLocal
         self.active_violations: Dict[int, int] = {}  # {face_id: violation_id}
@@ -69,7 +70,7 @@ class CameraService:
             model_file = model_path if model_path is not None else MODEL_PATH
 
             cap = cv2.VideoCapture(source)
-            if not cap.isOpened():
+            if not cap.isOpened() and camera_source is None:
                 logger.warning(f"Không thể mở camera index {source}. Đang thử webcam mặc định (0)...")
                 cap.release()
                 cap = cv2.VideoCapture(0)
@@ -138,10 +139,17 @@ class CameraService:
 
             self.thread = None
             self.latest_result = None
+            self.latest_jpeg = None
             self.active_violations.clear()
             logger.info("Camera stopped")
 
         return True
+
+    def get_jpeg_frame(self) -> Optional[bytes]:
+        """Returns the latest captured frame encoded as JPEG bytes."""
+        if not self.is_running:
+            return None
+        return self.latest_jpeg
 
     def _camera_loop(self):
         """
@@ -160,6 +168,13 @@ class CameraService:
                 if not ret or frame is None:
                     time.sleep(0.03)
                     continue
+
+                try:
+                    success, encoded = cv2.imencode(".jpg", frame, [cv2.IMWRITE_JPEG_QUALITY, 80])
+                    if success:
+                        self.latest_jpeg = encoded.tobytes()
+                except Exception:
+                    pass
 
                 try:
                     result = self.eye_service.process_frame(frame)

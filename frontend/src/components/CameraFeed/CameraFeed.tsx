@@ -22,7 +22,7 @@ const drawFaceInfo = (
   ctx: CanvasRenderingContext2D,
   face: WSFaceData,
   index: number,
-  canvasWidth: number,
+  _canvasWidth: number,
 ) => {
   const CARD_W = 200;
   const CARD_H = 78;

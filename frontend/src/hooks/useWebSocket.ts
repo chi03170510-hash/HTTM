@@ -28,7 +28,11 @@ export const useWebSocket = (): UseWebSocketReturn => {
   const connect = useCallback(() => {
     if (wsRef.current?.readyState === WebSocket.OPEN) return;
 
-    const ws = new WebSocket('ws://localhost:8000/ws/monitor');
+    const wsUrl =
+      typeof window !== 'undefined' && window.location.host
+        ? `${window.location.protocol === 'https:' ? 'wss:' : 'ws:'}//${window.location.host}/ws/monitor`
+        : 'ws://127.0.0.1:8000/ws/monitor';
+    const ws = new WebSocket(wsUrl);
     wsRef.current = ws;
 
     ws.onopen = () => {
