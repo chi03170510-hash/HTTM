@@ -220,3 +220,41 @@ __marimo__/
 # Eye detection local test data
 ai/eye_detection/data/test_eye.mp4
 ai/eye_detection/data/ear_test.csv
+
+# AI datasets
+ai/behavior_detection/datasets/raw/
+ai/behavior_detection/datasets/sleeping/
+
+# YOLO training outputs
+ai/behavior_detection/runs/
+
+# Trained weights
+*.pt
+
+# ==============================
+# Behavior Detection
+# ==============================
+
+# Dataset / label review
+ai/behavior_detection/datasets/
+ai/behavior_detection/label_review/
+ai/behavior_detection/label_preview/
+
+# YOLO training outputs
+ai/behavior_detection/runs/
+
+# Test data / generated results
+ai/behavior_detection/test_images/
+ai/behavior_detection/test_results/
+ai/behavior_detection/test_videos/
+ai/behavior_detection/video_results/
+
+# Python cache
+__pycache__/
+*.pyc
+
+# YOLO weights - ignore by default
+*.pt
+
+# But keep final behavior model
+!ai/behavior_detection/models/best_behavior_v1_4.pt
