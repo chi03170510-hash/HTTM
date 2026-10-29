@@ -1,233 +1,218 @@
 
 import cv2
 import time
+import threading
 from pathlib import Path
 from ultralytics import YOLO
 
-# ==========================================
-# 1. CAU HINH
-# ==========================================
-
+# ========== CAU HINH ==========
 BASE_DIR = Path(__file__).resolve().parent
-MODEL_PATH = BASE_DIR / "models" / "best_behavior_v1_4.pt"
+MODEL_PATH = BASE_DIR / "models" / "best.pt"
 
-# DroidCam iPhone
 CAMERA_ID = 1
-
 FRAME_WIDTH = 640
 FRAME_HEIGHT = 480
 
-PROCESS_EVERY_N_FRAMES = 3
-CONFIDENCE = 0.35
+PROCESS_INTERVAL = 0.15  # Khoang cach giua cac lan AI
+IMG_SIZE = 416
+CONFIDENCE = 0.20
 
-# Canh bao khi hanh vi > 5 giay
 WARNING_SECONDS = 5.0
+MAX_MISSING_SECONDS = 0.8
 
-# Cho phep mat detection ngan (giay)
-# Neu mat lau hon thi reset timer
-MAX_MISSING_SECONDS = 0.5
+# ========== CAMERA DOC FRAME MOI NHAT ==========
+class CameraStream:
+    def __init__(self, camera_id):
+        self.cap = cv2.VideoCapture(camera_id, cv2.CAP_MSMF)
 
-# ==========================================
-# 2. LOAD MODEL
-# ==========================================
+        if not self.cap.isOpened():
+            raise RuntimeError("Khong mo duoc DroidCam!")
 
+        self.cap.set(cv2.CAP_PROP_FRAME_WIDTH, FRAME_WIDTH)
+        self.cap.set(cv2.CAP_PROP_FRAME_HEIGHT, FRAME_HEIGHT)
+        self.cap.set(cv2.CAP_PROP_BUFFERSIZE, 1)
+
+        self.lock = threading.Lock()
+        self.frame = None
+        self.running = True
+
+        self.thread = threading.Thread(
+            target=self.update, daemon=True
+        )
+        self.thread.start()
+
+    def update(self):
+        while self.running:
+            ret, frame = self.cap.read()
+            if not ret:
+                time.sleep(0.02)
+                continue
+
+            with self.lock:
+                self.frame = frame
+
+    def read(self):
+        with self.lock:
+            if self.frame is None:
+                return None
+            return self.frame.copy()
+
+    def stop(self):
+        self.running = False
+        self.thread.join(timeout=2)
+        self.cap.release()
+
+
+# ========== LOAD MODEL ==========
 if not MODEL_PATH.exists():
-    raise FileNotFoundError(
-        f"Khong tim thay model: {MODEL_PATH}"
-    )
+    raise FileNotFoundError(f"Khong tim thay: {MODEL_PATH}")
 
-print("Dang load model YOLO...")
+cv2.setNumThreads(2)
 
+print("Dang load YOLO...")
 model = YOLO(str(MODEL_PATH))
+print("Model:", model.names)
 
-print("Load model thanh cong!")
-print("Danh sach hanh vi:", model.names)
+camera = CameraStream(CAMERA_ID)
 
-# ==========================================
-# 3. KET NOI CAMERA
-# ==========================================
-
-print("Dang ket noi DroidCam...")
-
-cap = cv2.VideoCapture(CAMERA_ID, cv2.CAP_MSMF)
-
-if not cap.isOpened():
-    raise RuntimeError(
-        "Khong ket noi duoc DroidCam Camera 1!"
-    )
-
-cap.set(cv2.CAP_PROP_FRAME_WIDTH, FRAME_WIDTH)
-cap.set(cv2.CAP_PROP_FRAME_HEIGHT, FRAME_HEIGHT)
-
-print("Camera da san sang!")
-print("Nhan Q de thoat.")
-
-# ==========================================
-# 4. TRANG THAI HANH VI
-# ==========================================
-
-# Timer theo tung loai hanh vi
-# Chi phu hop demo mot nguoi
 behavior_states = {
-    "sleeping": {
-        "start": None,
-        "last_seen": None
-    },
-    "using_phone": {
-        "start": None,
-        "last_seen": None
-    }
+    "sleeping": {"start": None, "last_seen": None},
+    "using_phone": {"start": None, "last_seen": None}
 }
 
-frame_count = 0
-last_results = None
+last_boxes = []
 last_detection_count = 0
-
+last_inference_time = 0
 previous_time = time.perf_counter()
-
-# ==========================================
-# 5. VONG LAP CAMERA
-# ==========================================
+fps_smooth = 0.0
 
 try:
     while True:
+        frame = camera.read()
 
-        ret, frame = cap.read()
-
-        if not ret:
-            print("Khong doc duoc frame!")
-            break
+        if frame is None:
+            time.sleep(0.01)
+            continue
 
         frame = cv2.resize(
-            frame,
-            (FRAME_WIDTH, FRAME_HEIGHT)
+            frame, (FRAME_WIDTH, FRAME_HEIGHT)
         )
 
-        frame_count += 1
         now = time.perf_counter()
 
-        # ==================================
-        # 6. CHAY YOLO MOI N FRAME
-        # ==================================
-
-        if frame_count % PROCESS_EVERY_N_FRAMES == 0:
-
+        # ========== CHAY AI ==========
+        if now - last_inference_time >= PROCESS_INTERVAL:
             results = model.predict(
                 source=frame,
+                imgsz=IMG_SIZE,
                 conf=CONFIDENCE,
-                imgsz=640,
                 verbose=False
             )
 
-            last_results = results[0]
-            last_detection_count = len(last_results.boxes)
+            result = results[0]
+            last_boxes = []
 
             detected_behaviors = set()
 
-            for box in last_results.boxes:
-
+            for box in result.boxes:
                 class_id = int(box.cls[0])
                 behavior = model.names[class_id]
+
+                x1, y1, x2, y2 = map(
+                    int, box.xyxy[0].tolist()
+                )
+
+                confidence = float(box.conf[0])
+
+                last_boxes.append(
+                    (x1, y1, x2, y2, behavior, confidence)
+                )
 
                 if behavior in behavior_states:
                     detected_behaviors.add(behavior)
 
-            # Cap nhat timer
+            last_detection_count = len(last_boxes)
+
+            # Thoi diem ket thuc inference
+            detection_time = time.perf_counter()
+            last_inference_time = detection_time
+
             for behavior, state in behavior_states.items():
-
                 if behavior in detected_behaviors:
-
                     if state["start"] is None:
-                        state["start"] = now
+                        state["start"] = detection_time
+                    state["last_seen"] = detection_time
 
-                    state["last_seen"] = now
+                elif state["last_seen"] is not None:
+                    if (detection_time - state["last_seen"]
+                            > MAX_MISSING_SECONDS):
+                        state["start"] = None
+                        state["last_seen"] = None
 
-                else:
-                    if state["last_seen"] is not None:
-                        missing_time = (
-                            now - state["last_seen"]
-                        )
+        # ========== VE BOX ==========
+        display_frame = frame.copy()
 
-                        if missing_time > MAX_MISSING_SECONDS:
-                            state["start"] = None
-                            state["last_seen"] = None
-
-        # ==================================
-        # 7. VE BOUNDING BOX
-        # ==================================
-
-        if last_results is not None:
-            display_frame = last_results.plot(
-                img=frame.copy()
-            )
-        else:
-            display_frame = frame.copy()
-
-        # ==================================
-        # 8. HIEN THI TIMER + WARNING
-        # ==================================
-
-        y_position = 110
-
-        for behavior, state in behavior_states.items():
-
-            if state["start"] is None:
-                continue
-
-            if (
-                state["last_seen"] is None
-                or now - state["last_seen"] > MAX_MISSING_SECONDS
-            ):
-                continue
-
-            duration = now - state["start"]
-
-            if duration > WARNING_SECONDS:
-
-                color = (0, 0, 255)
-                status = "WARNING"
-
-            else:
-
-                color = (0, 255, 255)
-                status = "DETECTING"
-
-            label = (
-                f"{behavior}: {duration:.1f}s "
-                f"- {status}"
+        for x1, y1, x2, y2, behavior, confidence in last_boxes:
+            cv2.rectangle(
+                display_frame,
+                (x1, y1), (x2, y2),
+                (0, 255, 0), 2
             )
 
             cv2.putText(
                 display_frame,
-                label,
-                (15, y_position),
+                f"{behavior} {confidence:.2f}",
+                (x1, max(20, y1 - 10)),
                 cv2.FONT_HERSHEY_SIMPLEX,
-                0.65,
-                color,
-                2
+                0.6, (0, 255, 0), 2
             )
 
+        # ========== TIMER + WARNING ==========
+        current_time = time.perf_counter()
+        y_position = 110
+
+        for behavior, state in behavior_states.items():
+            if state["start"] is None:
+                continue
+
+            if (state["last_seen"] is None
+                    or current_time - state["last_seen"]
+                    > MAX_MISSING_SECONDS):
+                continue
+
+            duration = current_time - state["start"]
+
+            if duration >= WARNING_SECONDS:
+                status = "WARNING"
+                color = (0, 0, 255)
+            else:
+                status = "DETECTING"
+                color = (0, 255, 255)
+
+            cv2.putText(
+                display_frame,
+                f"{behavior}: {duration:.1f}s - {status}",
+                (15, y_position),
+                cv2.FONT_HERSHEY_SIMPLEX,
+                0.65, color, 2
+            )
             y_position += 35
 
-        # ==================================
-        # 9. FPS
-        # ==================================
-
-        fps = 1.0 / max(
-            now - previous_time,
-            0.0001
+        # ========== FPS ==========
+        delta = max(current_time - previous_time, 0.0001)
+        instant_fps = 1.0 / delta
+        fps_smooth = (
+            0.9 * fps_smooth + 0.1 * instant_fps
+            if fps_smooth > 0 else instant_fps
         )
-
-        previous_time = now
+        previous_time = current_time
 
         cv2.putText(
             display_frame,
-            f"FPS: {fps:.1f}",
+            f"FPS: {fps_smooth:.1f}",
             (15, 35),
             cv2.FONT_HERSHEY_SIMPLEX,
-            0.8,
-            (0, 255, 0),
-            2
+            0.8, (0, 255, 0), 2
         )
 
         cv2.putText(
@@ -235,17 +220,11 @@ try:
             f"Detections: {last_detection_count}",
             (15, 70),
             cv2.FONT_HERSHEY_SIMPLEX,
-            0.65,
-            (0, 255, 255),
-            2
+            0.65, (0, 255, 255), 2
         )
 
-        # ==================================
-        # 10. HIEN THI CAMERA
-        # ==================================
-
         cv2.imshow(
-            "HTTM - AI Behavior Warning Demo",
+            "HTTM - Optimized AI Camera",
             display_frame
         )
 
@@ -253,7 +232,7 @@ try:
             break
 
 finally:
-    cap.release()
+    camera.stop()
     cv2.destroyAllWindows()
 
 print("Da dung chuong trinh!")

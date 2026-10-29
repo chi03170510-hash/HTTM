@@ -264,3 +264,18 @@ __pycache__/
 # But keep final behavior model
 !ai/behavior_detection/models/best_behavior_v1_4.pt
 >>>>>>> origin/Thien
+
+
+# Python environment
+.venv/
+__pycache__/
+*.pyc
+
+# Student and warning databases
+ai/behavior_detection/data/*.db
+
+# Camera logs and screenshots
+ai/behavior_detection/logs/
+
+# Local environment
+.env
