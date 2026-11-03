@@ -15,7 +15,7 @@ from insightface.app import FaceAnalysis
 # ==========================================
 BASE_DIR = Path(__file__).resolve().parent
 
-CAMERA_ID = 1
+CAMERA_ID = 0
 FRAME_WIDTH = 640
 FRAME_HEIGHT = 480
 

@@ -26,6 +26,9 @@ from test_behavior_tracking_ch18 import (
     associate_behaviors, draw_results, draw_text,
 )
 
+# Use the built-in laptop webcam instead of the imported DroidCam index.
+CAMERA_ID = 0
+
 # Experimental thresholds: validate with several known and unknown volunteers.
 FACE_CONFIDENCE = 0.60
 CONFIRM_FRAMES = 3
@@ -382,13 +385,13 @@ def main():
         timer = BehaviorTimer(warning_seconds=WARNING_SECONDS)
         database = WarningDatabase()
 
-        cap = cv2.VideoCapture(CAMERA_ID)
+        cap = cv2.VideoCapture(CAMERA_ID, cv2.CAP_DSHOW)
         if not cap.isOpened():
-            raise RuntimeError(f"Cannot open DroidCam at index {CAMERA_ID}")
+            raise RuntimeError(f"Cannot open laptop webcam at index {CAMERA_ID}")
         cap.set(cv2.CAP_PROP_FRAME_WIDTH, FRAME_WIDTH)
         cap.set(cv2.CAP_PROP_FRAME_HEIGHT, FRAME_HEIGHT)
         cap.set(cv2.CAP_PROP_BUFFERSIZE, 1)
-        logger.info("DroidCam connected | CH-20M started")
+        logger.info("Laptop webcam connected | CH-20M started")
         print("\nQ = Quit | S = Screenshot\n")
 
         frame_index, inference_id = 0, 0

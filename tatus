@@ -1,0 +1,76 @@
+ ai/behavior_detection/README_CAM.md                |  208 [32m++++[m
+ ai/behavior_detection/behavior_state_manager.py    |  158 [32m+++[m
+ ai/behavior_detection/behavior_timer.py            |  101 [32m++[m
+ ai/behavior_detection/check_embedding_quality.py   |  113 [32m+++[m
+ ai/behavior_detection/data/behavior_warnings.db    |  Bin [31m0[m -> [32m12288[m bytes
+ ai/behavior_detection/data/students_faces.db       |  Bin [31m0[m -> [32m61440[m bytes
+ ai/behavior_detection/logs/ch16_1793200708.jpg     |  Bin [31m0[m -> [32m74648[m bytes
+ ai/behavior_detection/logs/ch16_1793200714.jpg     |  Bin [31m0[m -> [32m75275[m bytes
+ ai/behavior_detection/logs/ch16_1793201194.jpg     |  Bin [31m0[m -> [32m74193[m bytes
+ ai/behavior_detection/logs/ch16_1793201213.jpg     |  Bin [31m0[m -> [32m81744[m bytes
+ ai/behavior_detection/logs/ch16_1793204157.jpg     |  Bin [31m0[m -> [32m81031[m bytes
+ ai/behavior_detection/logs/ch16_1793204393.jpg     |  Bin [31m0[m -> [32m79003[m bytes
+ ai/behavior_detection/logs/ch17_1793205213.jpg     |  Bin [31m0[m -> [32m74316[m bytes
+ ai/behavior_detection/logs/ch17_1793205222.jpg     |  Bin [31m0[m -> [32m78206[m bytes
+ ai/behavior_detection/logs/ch17_1793205223.jpg     |  Bin [31m0[m -> [32m83994[m bytes
+ ai/behavior_detection/logs/ch17_1793205224.jpg     |  Bin [31m0[m -> [32m77194[m bytes
+ ai/behavior_detection/logs/ch17_1793211669.jpg     |  Bin [31m0[m -> [32m72059[m bytes
+ ai/behavior_detection/logs/ch17_1793211672.jpg     |  Bin [31m0[m -> [32m80216[m bytes
+ ai/behavior_detection/logs/ch17_1793211674.jpg     |  Bin [31m0[m -> [32m80122[m bytes
+ ai/behavior_detection/logs/ch17_1793211675.jpg     |  Bin [31m0[m -> [32m81246[m bytes
+ ai/behavior_detection/logs/detection_log.csv       |  140 [32m+++[m
+ ai/behavior_detection/logs/insightface_log.txt     |   90 [32m++[m
+ .../logs/unknown_test_results.csv                  |   12 [32m+[m
+ .../ch20_track_1_20261029_014500_572141.jpg        |  Bin [31m0[m -> [32m68391[m bytes
+ .../ch20_track_1_20261029_014524_093144.jpg        |  Bin [31m0[m -> [32m80093[m bytes
+ .../ch20_track_1_20261029_014744_612003.jpg        |  Bin [31m0[m -> [32m81265[m bytes
+ .../ch20_track_1_20261029_014808_540003.jpg        |  Bin [31m0[m -> [32m80207[m bytes
+ .../ch20_track_2_20261029_015559_113187.jpg        |  Bin [31m0[m -> [32m82322[m bytes
+ .../ch20_track_6_20261029_020656_886728.jpg        |  Bin [31m0[m -> [32m85710[m bytes
+ .../ch20_track_6_20261029_020714_524729.jpg        |  Bin [31m0[m -> [32m83608[m bytes
+ ..._track_1_using_phone_20261029_021152_002189.jpg |  Bin [31m0[m -> [32m76806[m bytes
+ ..._track_1_using_phone_20261029_021517_867499.jpg |  Bin [31m0[m -> [32m76714[m bytes
+ ..._track_1_using_phone_20261029_021826_129215.jpg |  Bin [31m0[m -> [32m78820[m bytes
+ ..._track_1_using_phone_20261029_021837_788229.jpg |  Bin [31m0[m -> [32m79684[m bytes
+ ..._track_4_using_phone_20261029_022024_737215.jpg |  Bin [31m0[m -> [32m83711[m bytes
+ ..._track_5_using_phone_20261029_021914_364214.jpg |  Bin [31m0[m -> [32m77962[m bytes
+ ..._track_5_using_phone_20261029_022021_421235.jpg |  Bin [31m0[m -> [32m83207[m bytes
+ ..._track_1_using_phone_20261029_022427_654060.jpg |  Bin [31m0[m -> [32m84736[m bytes
+ ..._track_2_using_phone_20261029_022422_502032.jpg |  Bin [31m0[m -> [32m84710[m bytes
+ ..._track_2_using_phone_20261029_022435_560034.jpg |  Bin [31m0[m -> [32m86142[m bytes
+ ..._track_1_using_phone_20261029_023204_471390.jpg |  Bin [31m0[m -> [32m78392[m bytes
+ ..._track_3_using_phone_20261029_023219_863391.jpg |  Bin [31m0[m -> [32m87468[m bytes
+ ..._track_4_using_phone_20261029_023009_103846.jpg |  Bin [31m0[m -> [32m91035[m bytes
+ ..._track_1_using_phone_20261029_023608_922960.jpg |  Bin [31m0[m -> [32m90617[m bytes
+ .../track_1_sleeping_20261029_013705_024989.jpg    |  Bin [31m0[m -> [32m63181[m bytes
+ .../track_1_using_phone_20261029_013220_050448.jpg |  Bin [31m0[m -> [32m67501[m bytes
+ .../using_phone_20261027_190017_364391.jpg         |  Bin [31m0[m -> [32m79530[m bytes
+ ai/behavior_detection/models/README.md             |  131 [32m+++[m
+ ai/behavior_detection/models/best.pt               |  Bin [31m0[m -> [32m5471642[m bytes
+ ai/behavior_detection/register_student_face.py     |  482 [32m+++++++++[m
+ ai/behavior_detection/student_face_recognizer.py   |  246 [32m+++++[m
+ ai/behavior_detection/test_behavior_timer_ch18.py  |   83 [32m++[m
+ .../test_behavior_tracking_ch16.py                 | 1036 [32m++++++++++++++++++++[m
+ .../test_behavior_tracking_ch18.py                 |  978 [32m++++++++++++++++++[m
+ .../test_behavior_tracking_ch19.py                 |  514 [32m++++++++++[m
+ .../test_behavior_tracking_ch20.py                 |  272 [32m+++++[m
+ .../test_behavior_tracking_ch20h.py                |  334 [32m+++++++[m
+ .../test_behavior_tracking_ch20i.py                |  369 [32m+++++++[m
+ .../test_behavior_tracking_ch20j.py                |  392 [32m++++++++[m
+ .../test_behavior_tracking_ch20k.py                |  424 [32m++++++++[m
+ .../test_behavior_tracking_ch20l.py                |  439 [32m+++++++++[m
+ .../test_behavior_tracking_ch20m.py                |  505 [32m++++++++++[m
+ .../test_behavior_tracking_ch20n.py                |    0
+ ai/behavior_detection/test_embedding_similarity.py |  202 [32m++++[m
+ ai/behavior_detection/test_face_tracking.py        |  330 [32m+++++++[m
+ ai/behavior_detection/test_insightface_camera.py   |  314 [32m++++++[m
+ ai/behavior_detection/test_multiple_faces.py       |  927 [32m++++++++++++++++++[m
+ .../test_track_student_mapping.py                  |  172 [32m++++[m
+ .../test_tracking_student_display.py               |  493 [32m++++++++++[m
+ ai/behavior_detection/test_unknown_handling.py     |  140 [32m+++[m
+ .../test_warning_database_ch19.py                  |   23 [32m+[m
+ ai/behavior_detection/test_yolo_behavior_ch15.py   |  363 [32m+++++++[m
+ ai/behavior_detection/test_yolo_camera.py          |  271 [32m+++[m[31m--[m
+ .../test_yolo_camera_optimized.py                  |  648 [32m++++++++++++[m
+ ai/behavior_detection/warning_database.py          |   86 [32m++[m
+ 75 files changed, 10850 insertions(+), 146 deletions(-)
