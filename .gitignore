@@ -58,8 +58,12 @@ cover/
 # Django stuff:
 *.log
 local_settings.py
-db.sqlite3
-db.sqlite3-journal
+*.db
+*.db-*
+*.sqlite
+*.sqlite-*
+*.sqlite3
+*.sqlite3-*
 
 # Flask stuff:
 instance/
@@ -149,8 +153,12 @@ activemq-data/
 
 # Environments
 .env
+.env.*
+!.env.example
+!.env.sample
+!.env.template
 .envrc
-.venv
+.venv/
 env/
 venv/
 ENV/
@@ -222,19 +230,10 @@ ai/eye_detection/data/test_eye.mp4
 ai/eye_detection/data/ear_test.csv
 
 # Uploaded images & snapshots
-backend/uploads/*
+backend/uploads/**
+!backend/uploads/violations/
 !backend/uploads/violations/.gitkeep
 node_modules/
-=======
-# AI datasets
-ai/behavior_detection/datasets/raw/
-ai/behavior_detection/datasets/sleeping/
-
-# YOLO training outputs
-ai/behavior_detection/runs/
-
-# Trained weights
-*.pt
 
 # ==============================
 # Behavior Detection
@@ -254,28 +253,21 @@ ai/behavior_detection/test_results/
 ai/behavior_detection/test_videos/
 ai/behavior_detection/video_results/
 
-# Python cache
-__pycache__/
-*.pyc
-
-# YOLO weights - ignore by default
+# YOLO weights: training artifacts and release-distributed V2 stay local
 *.pt
 
-# But keep final behavior model
+# Keep the existing versioned behavior checkpoints
+!ai/behavior_detection/models/best.pt
 !ai/behavior_detection/models/best_behavior_v1_4.pt
->>>>>>> origin/Thien
-
-
-# Python environment
-.venv/
-__pycache__/
-*.pyc
-
-# Student and warning databases
-ai/behavior_detection/data/*.db
 
 # Camera logs and screenshots
 ai/behavior_detection/logs/
 
-# Local environment
-.env
+# HTTM AI V2 source inputs and generated evaluation outputs (not source deliverables)
+ai/behavior_detection/dataset_sources_new/
+ai/behavior_detection/experiments/accuracy_first_development/datasets/
+reports/three_behavior_v2/kaggle_training_artifacts/
+reports/experimental_v1_hybrid/
+reports/experimental_v2_hybrid/
+reports/experimental_v1_inference/
+reports/experimental_v2_inference/
