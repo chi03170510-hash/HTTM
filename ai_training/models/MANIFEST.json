@@ -1,0 +1,48 @@
+{
+  "assets": [
+    {
+      "path": "best_behavior_v2.pt",
+      "size_bytes": 5473818,
+      "sha256": "4c932dc472c4480d7b1910203a5f4c09782ace770bd8fb8b8f20e8b638e3861e",
+      "role": "primary_behavior_detector",
+      "architecture": "YOLO11n",
+      "task": "detect",
+      "class_mapping": {
+        "0": "sleeping",
+        "1": "using_phone"
+      }
+    },
+    {
+      "path": "best_behavior_v1_4.pt",
+      "size_bytes": 5467994,
+      "sha256": "6ce96c34ddc62327de37aa1b7ede9cd12863f4c0299f3d39b70f313263a04b47",
+      "role": "reference_behavior_detector",
+      "architecture": "YOLO11n",
+      "task": "detect",
+      "class_mapping": {
+        "0": "sleeping",
+        "1": "using_phone"
+      }
+    },
+    {
+      "path": "pretrained_person/yolo11n_coco.pt",
+      "size_bytes": 5613764,
+      "sha256": "0ebbc80d4a7680d14987a577cd21342b65ecfd94632bd9a8da63ae6417644ee1",
+      "role": "COCO_person_phone_food_object_proposals",
+      "architecture": "YOLO11n",
+      "task": "detect"
+    },
+    {
+      "path": "face_landmarker.task",
+      "size_bytes": 3758596,
+      "sha256": "64184e229b263107bc2b804c6625db1341ff2bb731874b0bcc2fe6544e0bc9ff",
+      "role": "MediaPipe_FaceLandmarker"
+    },
+    {
+      "path": "pose_landmarker_full.task",
+      "size_bytes": 9398198,
+      "sha256": "5134a3aad27a58b93da0088d431f366da362b44e3ccfbe3462b3827a839011b1",
+      "role": "MediaPipe_PoseLandmarker"
+    }
+  ]
+}

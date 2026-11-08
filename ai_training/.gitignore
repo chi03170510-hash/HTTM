@@ -1,0 +1,33 @@
+# Local environments, private credentials, and generated artifacts
+.venv/
+venv/
+env/
+.env
+.env.*
+!.env.example
+__pycache__/
+*.py[cod]
+.ipynb_checkpoints/
+.pytest_cache/
+.mypy_cache/
+*.log
+*.tmp
+
+# Training and evaluation data/output (do not add classroom imagery/video)
+datasets/
+test_images/
+videos/
+runs/
+reports/generated/
+*.mp4
+*.mov
+*.avi
+*.mkv
+
+# Keep only the two approved behavior checkpoints as tracked model files.
+models/*.pt
+!models/best_behavior_v2.pt
+!models/best_behavior_v1_4.pt
+models/detection/
+models/pretrained_person/*.pt
+!models/pretrained_person/yolo11n_coco.pt
