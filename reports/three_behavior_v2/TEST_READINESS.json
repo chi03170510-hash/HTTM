@@ -1,0 +1,43 @@
+{
+  "status": "TEST_NOT_AVAILABLE",
+  "test_created": false,
+  "train_validation_modified": false,
+  "training_executed": false,
+  "sources": {
+    "Classroom Behavior.v1-2026-05-03-3-5.yolov11.zip": {
+      "source_test_images": 64,
+      "mapped_target_positive_images": 0,
+      "mapped_target_instances": {
+        "sleeping": 0,
+        "using_phone": 0,
+        "raising_hand": 0
+      },
+      "scene_proxy_groups": 1,
+      "scene_proxy_overlap_with_v2_train_val": 0,
+      "exact_sha256_matches_with_v2_train_val": 0,
+      "phash_distance_le_4_matches_with_v2_train_val": 0,
+      "annotation_completeness": "UNVERIFIED",
+      "usable_as_test": false
+    },
+    "Classroom Student Dataset.v16-reshaped_trining_1778_dataset.yolov11 (1).zip": {
+      "source_test_images": 0,
+      "has_source_validation_or_test_split": false,
+      "annotation_completeness": "UNVERIFIED",
+      "usable_as_test": false
+    }
+  },
+  "v2_train_validation": {
+    "train_images": 1086,
+    "validation_images": 214,
+    "source_manifest_images": 1300,
+    "cross_split_scene_group_overlap": 0,
+    "cross_split_exact_hash_pairs": 0,
+    "cross_split_phash_distance_le_4_pairs": 0
+  },
+  "reasons": [
+    "No source offers an independent Test split with approved, completeness-verified annotations for all three target behaviors.",
+    "Classroom Behavior source Test has no mapped target-positive boxes; its hand class is intentionally unmapped.",
+    "V16 provides only source Train and annotation completeness is unverified.",
+    "No unused scene groups can be promoted to a credible Test without using unverified Train-only annotations."
+  ]
+}

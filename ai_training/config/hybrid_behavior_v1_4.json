@@ -1,0 +1,33 @@
+{
+  "sleeping_conf": 0.75,
+  "sleeping_confirm_sec": 4.0,
+  "sleeping_yolo_only_can_confirm": true,
+  "phone_conf": 0.75,
+  "phone_confirm_sec": 2.5,
+  "candidate_window_sec": 12.0,
+  "min_observations": 3,
+  "closed_eye_ear": 0.18,
+  "closed_eye_confirm_sec": 3.0,
+  "turn_suspect_deg": 45.0,
+  "turn_confirm_deg": 90.0,
+  "turn_confirm_sec": 1.75,
+  "rear_direction_calibrated": false,
+  "eating_window_sec": 10.0,
+  "eating_cycles_confirm": 2,
+  "mouth_motion_threshold": 0.035,
+  "phone_negative_duration_sec": 1.0,
+  "cooldown_sec": 5.0,
+  "spatial": {
+    "sleeping_detect": 0.75,
+    "sleeping_suspect": 0.30,
+    "phone_detect": 0.75,
+    "phone_suspect": 0.25,
+    "sleeping_ear_closed": 0.18,
+    "sleeping_pitch_support_deg": 35.0,
+    "eating_mouth_open_ratio": 0.15,
+    "mouth_hand_distance_ratio": 0.12,
+    "head_turn_suspect_deg": 45.0,
+    "rear_yaw_target_deg": null,
+    "rear_yaw_tolerance_deg": 20.0
+  }
+}

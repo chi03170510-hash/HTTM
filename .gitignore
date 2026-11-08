@@ -216,3 +216,11 @@ __marimo__/
 
 # Streamlit
 .streamlit/secrets.toml
+# HTTM AI V2 source inputs and generated evaluation outputs (not source deliverables)
+ai/behavior_detection/dataset_sources_new/
+ai/behavior_detection/experiments/accuracy_first_development/datasets/
+reports/three_behavior_v2/kaggle_training_artifacts/
+reports/experimental_v1_hybrid/
+reports/experimental_v2_hybrid/
+reports/experimental_v1_inference/
+reports/experimental_v2_inference/
