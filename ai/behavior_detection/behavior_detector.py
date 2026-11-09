@@ -1,72 +1,204 @@
-"""YOLO behavior detector with explicit V2/V1 experimental checkpoint selection."""
+
+"""
+HTTM - YOLO Behavior Detector
+Official Round 3 Model
+
+Model: ai/behavior_detection/models/best.pt
+
+Supported behaviors:
+    0 - sleeping
+    1 - using_phone
+
+This detector does not support raising_hand.
+"""
+
+from dataclasses import asdict
+import math
 from pathlib import Path
+import time
+
+import numpy as np
 from ultralytics import YOLO
 
-MODEL_DIR = Path(__file__).resolve().parent / "models" / "experimental"
-CHECKPOINTS = {
-    "v2": MODEL_DIR / "three_behavior_v2_best.pt",
-    "v1": MODEL_DIR / "three_behavior_v1_last.pt",
+if __package__:
+    from .diagnostics import emit_debug
+else:  # Preserve imports from scripts run inside ai/behavior_detection.
+    from diagnostics import emit_debug
+
+BASE_DIR = Path(__file__).resolve().parent
+DEFAULT_MODEL_PATH = BASE_DIR / "models" / "best.pt"
+
+EXPECTED_CLASSES = {
+    0: "sleeping",
+    1: "using_phone",
 }
-EXPECTED_CLASSES = {0: "sleeping", 1: "using_phone", 2: "raising_hand"}
+CANDIDATE_CONFIDENCE = 0.10
 
 
 class BehaviorDetector:
-    """Detect sleeping, using_phone, and raising_hand from a BGR frame.
+    """
+    Detect student behaviors using the official Round 3 YOLO model.
 
-    The default experimental model is V2. Pass ``model_version="v1"`` or an
-    explicit ``model_path`` to run the V1 checkpoint for comparison.
+    Compatible with:
+        - detector_adapter.py
+        - integration.run_video
+        - legacy pipeline
     """
 
-    def __init__(self, model_path=None, sleeping_conf=0.40, phone_conf=0.40,
-                 raising_hand_conf=0.40, imgsz=640, device=None, model_version="v2"):
-        version = str(model_version).lower()
-        if version not in CHECKPOINTS:
-            raise ValueError(f"Unknown model_version={model_version!r}; choose one of {tuple(CHECKPOINTS)}")
-        self.model_path = Path(model_path) if model_path is not None else CHECKPOINTS[version]
-        if not self.model_path.is_file():
-            raise FileNotFoundError(f"Behavior checkpoint not found: {self.model_path}")
-        self.model = YOLO(str(self.model_path))
-        names = self.model.names
-        name_items = names.items() if isinstance(names, dict) else enumerate(names)
-        self.class_names = {int(class_id): str(name).strip().lower() for class_id, name in name_items}
-        if len(set(self.class_names.values())) != len(self.class_names):
-            raise RuntimeError(f"Checkpoint has duplicate class names: {self.class_names}")
-        if any(name not in EXPECTED_CLASSES.values() for name in self.class_names.values()):
-            raise RuntimeError(f"Unsupported behavior class mapping: {self.class_names}")
-        legacy_two_class = {0: "sleeping", 1: "using_phone"}
-        if self.class_names not in (EXPECTED_CLASSES, legacy_two_class):
-            raise RuntimeError(f"Checkpoint class IDs do not match HTTM mapping: {self.class_names}")
+    def __init__(
+        self,
+        model_path=None,
+        sleeping_conf=0.40,
+        phone_conf=0.40,
+        imgsz=640,
+        device=None,
+        *,
+        debug_detections=False,
+    ):
+        # 1. Select official Round 3 checkpoint
+        self.model_path = (
+            Path(model_path)
+            if model_path is not None
+            else DEFAULT_MODEL_PATH
+        )
 
+        if not self.model_path.is_file():
+            raise FileNotFoundError(
+                f"YOLO checkpoint not found: {self.model_path}"
+            )
+
+        # 2. Load YOLO model
+        self.model = YOLO(str(self.model_path))
+
+        # 3. Read class names from checkpoint
+        names = self.model.names
+
+        if isinstance(names, dict):
+            name_items = names.items()
+        else:
+            name_items = enumerate(names)
+
+        self.class_names = {
+            int(class_id): str(name).strip().lower()
+            for class_id, name in name_items
+        }
+
+        # 4. Validate official Round 3 classes
+        if self.class_names != EXPECTED_CLASSES:
+            raise RuntimeError(
+                "Incorrect YOLO checkpoint classes.\n"
+                f"Expected: {EXPECTED_CLASSES}\n"
+                f"Actual: {self.class_names}\n"
+                f"Model: {self.model_path}"
+            )
+
+        self.supported_behaviors = tuple(
+            self.class_names.values()
+        )
+
+        # 5. Configure thresholds
         self.thresholds = {
             "sleeping": float(sleeping_conf),
             "using_phone": float(phone_conf),
-            "raising_hand": float(raising_hand_conf),
         }
+
+        for behavior, threshold in self.thresholds.items():
+            if not 0.0 <= threshold <= 1.0:
+                raise ValueError(
+                    f"Invalid confidence threshold for "
+                    f"{behavior}: {threshold}"
+                )
+
         self.imgsz = imgsz
         self.device = device
+        self.debug_detections = debug_detections
+        self._debug_context = None
+        self.last_debug_candidates = None
+
+    def set_debug_context(self, metadata):
+        """Associate opt-in reports with the original frame, on the AI thread."""
+        self._debug_context = asdict(metadata)
+
+    def _predict_yolo(self, frame):
+        return self.model.predict(
+            source=frame,
+            imgsz=self.imgsz,
+            conf=CANDIDATE_CONFIDENCE,
+            iou=0.70,
+            device=self.device,
+            verbose=False,
+        )[0]
+
+    def warmup(self, frame_shape=(480, 640, 3)):
+        """Prepare the predictor before capture; dummy output is never an event."""
+        frame = np.zeros(frame_shape, dtype=np.uint8)
+        emit_debug("yolo_warmup_start", input_shape=list(frame.shape), model=str(self.model_path))
+        started = time.perf_counter()
+        self._predict_yolo(frame)
+        elapsed_ms = (time.perf_counter() - started) * 1000
+        emit_debug("yolo_warmup", input_shape=list(frame.shape),
+                   duration_ms=round(elapsed_ms, 3), model=str(self.model_path),
+                   counted_as_detection=False)
+        return elapsed_ms
 
     def predict(self, frame):
-        """Predict per-frame detections from an OpenCV BGR ndarray.
-
-        Each result is a model detection, not a ground-truth behavior event.
-        ``track_id`` remains None because this per-frame module does not track.
         """
-        if frame is None or getattr(frame, "ndim", None) != 3 or frame.shape[2] != 3:
-            raise ValueError("frame must be a non-empty OpenCV BGR image with shape HxWx3")
-        result = self.model.predict(
-            source=frame, imgsz=self.imgsz, conf=0.10, iou=0.70,
-            device=self.device, verbose=False
-        )[0]
+        Run YOLO inference on one OpenCV BGR frame.
+
+        Returns a list of detection dictionaries.
+        """
+
+        # Reset per-call debug state so an error cannot reuse the previous boxes.
+        self.last_debug_candidates = None
+        # Validate input frame
+        if (
+            not isinstance(frame, np.ndarray)
+            or getattr(frame, "ndim", None) != 3
+            or frame.shape[2] != 3
+            or frame.shape[0] == 0
+            or frame.shape[1] == 0
+        ):
+            raise ValueError(
+                "frame must be a non-empty BGR image (HxWx3)"
+            )
+        if frame.dtype != np.uint8:
+            raise ValueError("frame must use OpenCV BGR uint8 values in the range 0..255")
+
+        # Run YOLO inference
+        predictor = getattr(self.model, "predictor", None)
+        cold_start = not bool(predictor is not None and getattr(predictor, "done_warmup", False))
+        started = time.perf_counter()
+        result = self._predict_yolo(frame)
+        predict_ms = (time.perf_counter() - started) * 1000
+
         detections = []
-        if result.boxes is None:
-            return detections
-        for box in result.boxes:
+        candidates = []
+
+        # Process bounding boxes
+        for box in result.boxes if result.boxes is not None else ():
             class_id = int(box.cls[0])
-            class_name = self.class_names[class_id]
+            class_name = self.class_names.get(class_id)
             confidence = float(box.conf[0])
-            if confidence < self.thresholds[class_name]:
+            threshold = self.thresholds.get(class_name)
+            reason = ("unsupported_class_id" if class_name is None else
+                      "below_class_threshold" if confidence < threshold else "accepted")
+            bbox_xyxy = ([float(value) for value in box.xyxy[0].tolist()]
+                         if self.debug_detections or reason == "accepted" else None)
+            if self.debug_detections:
+                x1, y1, x2, y2 = bbox_xyxy
+                candidates.append({
+                    "class_id": class_id, "class_name": class_name,
+                    "confidence": confidence, "bbox_xyxy": bbox_xyxy,
+                    "official_threshold": threshold, "decision": reason,
+                    "bbox_in_source_bounds": (
+                        all(math.isfinite(v) for v in bbox_xyxy)
+                        and 0 <= x1 <= x2 <= frame.shape[1]
+                        and 0 <= y1 <= y2 <= frame.shape[0]
+                    ),
+                })
+            if reason != "accepted":
                 continue
-            bbox_xyxy = [float(v) for v in box.xyxy[0].tolist()]
+
             detections.append({
                 "class_id": class_id,
                 "class_name": class_name,
@@ -75,17 +207,63 @@ class BehaviorDetector:
                 "track_id": None,
                 "status": "MODEL_DETECTION",
             })
+
+        if self.debug_detections:
+            # Consumed on the same AI thread by the optional image recorder.
+            self.last_debug_candidates = candidates
+            speed = getattr(result, "speed", {}) or {}
+            emit_debug(
+                "yolo_candidates", metadata=self._debug_context,
+                stage="post_nms_before_official_threshold",
+                candidate_confidence_floor=CANDIDATE_CONFIDENCE,
+                thresholds=self.thresholds, model=str(self.model_path), classes=self.class_names,
+                input={"shape_hwc": list(frame.shape), "dtype": str(frame.dtype),
+                       "pixel_format": "BGR", "contiguous": bool(frame.flags.c_contiguous),
+                       "strides": list(frame.strides),
+                       "value_range": [int(frame.min()), int(frame.max())]},
+                requested_imgsz=self.imgsz,
+                yolo_original_shape=list(getattr(result, "orig_shape", frame.shape[:2])),
+                bbox_coordinate_space="original_input_pixels_xyxy",
+                cold_start=cold_start, predict_wall_ms=round(predict_ms, 3),
+                yolo_stage_ms={k: float(v) for k, v in speed.items()},
+                unprofiled_ms=round(max(0.0, predict_ms - sum(speed.values())), 3),
+                candidates=candidates, accepted_count=len(detections),
+                empty_reason=("no_yolo_candidates_at_conf_0.10" if not candidates else
+                              "all_candidates_filtered" if not detections else None),
+            )
         return detections
 
     def detect(self, frame):
-        """Compatibility adapter for the legacy detector interface."""
+        """
+        Legacy compatibility method.
+
+        Output format expected by detector_adapter.py:
+            class
+            class_id
+            confidence
+            bbox
+        """
+
+        predictions = self.predict(frame)
+
         return [
-            {"class": item["class_name"], "class_id": item["class_id"],
-             "confidence": item["confidence"],
-             "bbox": [int(v) for v in item["bbox_xyxy"]]}
-            for item in self.predict(frame)
+            {
+                "class": item["class_name"],
+                "class_id": item["class_id"],
+                "confidence": item["confidence"],
+                "bbox": [
+                    int(value)
+                    for value in item["bbox_xyxy"]
+                ],
+            }
+            for item in predictions
         ]
 
     def reset(self):
-        """Reset per-video state. This detector is stateless and assigns no track IDs."""
+        """
+        Reset detector state.
+
+        This YOLO detector is stateless.
+        Tracking is handled by another component.
+        """
         return None

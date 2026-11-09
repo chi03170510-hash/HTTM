@@ -1,0 +1,74 @@
+[
+  {
+    "reference": "../reports/official_round3_install_20261027_125235_4dea81/MODEL_REPLACEMENT_REPORT.md",
+    "exists": false
+  },
+  {
+    "reference": "../experiments/round3_training_recipe_audit/ROUND3_RECIPE.md",
+    "exists": false
+  },
+  {
+    "reference": "../experiments/historical_checkpoint_comparison/received_20261027_124752_e6eb2e/ARTIFACT_REVIEW_REPORT.md",
+    "exists": false
+  },
+  {
+    "reference": "../experiments/round3_quality_finetune/received_20261027_030236/ARTIFACT_REVIEW_REPORT.md",
+    "exists": false
+  },
+  {
+    "reference": "../experiments/round3_quality_finetune/received_candidate2_20261027_034519/CANDIDATE2_ARTIFACT_REVIEW.md",
+    "exists": false
+  },
+  {
+    "reference": "../experiments/round3_recipe_replay_A/received_20261027_094216_ce0317/ARTIFACT_REVIEW_REPORT.md",
+    "exists": false
+  },
+  {
+    "reference": "../experiments/round3_recipe_replay_B/received_20261027_113237_86bb32/ARTIFACT_REVIEW_REPORT.md",
+    "exists": false
+  },
+  {
+    "reference": "../experiments/historical_checkpoint_recovery/HIGH_SCORE_70_75_AUDIT.md",
+    "exists": false
+  },
+  {
+    "reference": "../experiments/historical_checkpoint_recovery/HISTORICAL_TRAINING_INVENTORY.csv",
+    "exists": false
+  },
+  {
+    "reference": "../reports/yolo11n_round4_error_audit_20261025/AUDIT_REPORT.md",
+    "exists": false
+  },
+  {
+    "reference": "../reports/round3_vs_round6_diagnostic_20261026/ROUND3_VS_ROUND6_DIAGNOSTIC_REPORT.md",
+    "exists": false
+  },
+  {
+    "reference": "../experiments/yolo_resolution_architecture/results/t4_investigation_20261026/T4_INVESTIGATION_REPORT.md",
+    "exists": false
+  },
+  {
+    "reference": "../experiments/round3_quality_finetune/candidate3_data_preparation/provenance_recovery/SOURCE_RECOVERY_REPORT.md",
+    "exists": false
+  },
+  {
+    "reference": "../experiments/round3_person_filter/FILTER_DECISION.md",
+    "exists": false
+  },
+  {
+    "reference": "../experiments/round3_confidence_analysis/RECOMMENDATION.md",
+    "exists": false
+  },
+  {
+    "reference": "../experiments/round3_self_recorded_video/runs/self_20261026_234155_2bfe5a/evaluations/selected_gt_20261027_003722_181bb6/GT_EVALUATION_REPORT.md",
+    "exists": false
+  },
+  {
+    "reference": "../experiments/round3_video_threshold_comparison/COMPARISON_REPORT.md",
+    "exists": false
+  },
+  {
+    "reference": "../experiments/round3_training_recipe_audit/REGRESSION_HYPOTHESES.md",
+    "exists": false
+  }
+]

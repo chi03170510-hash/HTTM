@@ -1,0 +1,27 @@
+{"status": "ok", "metadata": {"source_id": "0", "frame_index": 0, "timestamp_ms": 281, "frame_width": 640, "frame_height": 480}, "detections": [], "error": null}
+{"status": "ok", "metadata": {"source_id": "0", "frame_index": 1, "timestamp_ms": 2734, "frame_width": 640, "frame_height": 480}, "detections": [], "error": null}
+{"status": "ok", "metadata": {"source_id": "0", "frame_index": 2, "timestamp_ms": 2812, "frame_width": 640, "frame_height": 480}, "detections": [], "error": null}
+{"status": "ok", "metadata": {"source_id": "0", "frame_index": 16, "timestamp_ms": 3297, "frame_width": 640, "frame_height": 480}, "detections": [], "error": null}
+{"status": "ok", "metadata": {"source_id": "0", "frame_index": 31, "timestamp_ms": 3797, "frame_width": 640, "frame_height": 480}, "detections": [], "error": null}
+{"status": "ok", "metadata": {"source_id": "0", "frame_index": 43, "timestamp_ms": 4328, "frame_width": 640, "frame_height": 480}, "detections": [], "error": null}
+{"status": "ok", "metadata": {"source_id": "0", "frame_index": 54, "timestamp_ms": 4797, "frame_width": 640, "frame_height": 480}, "detections": [], "error": null}
+{"status": "ok", "metadata": {"source_id": "0", "frame_index": 66, "timestamp_ms": 5281, "frame_width": 640, "frame_height": 480}, "detections": [], "error": null}
+{"status": "ok", "metadata": {"source_id": "0", "frame_index": 78, "timestamp_ms": 5781, "frame_width": 640, "frame_height": 480}, "detections": [], "error": null}
+{"status": "ok", "metadata": {"source_id": "0", "frame_index": 93, "timestamp_ms": 6281, "frame_width": 640, "frame_height": 480}, "detections": [], "error": null}
+{"status": "ok", "metadata": {"source_id": "0", "frame_index": 109, "timestamp_ms": 6812, "frame_width": 640, "frame_height": 480}, "detections": [], "error": null}
+{"status": "ok", "metadata": {"source_id": "0", "frame_index": 123, "timestamp_ms": 7281, "frame_width": 640, "frame_height": 480}, "detections": [], "error": null}
+{"status": "ok", "metadata": {"source_id": "0", "frame_index": 135, "timestamp_ms": 7781, "frame_width": 640, "frame_height": 480}, "detections": [], "error": null}
+{"status": "ok", "metadata": {"source_id": "0", "frame_index": 150, "timestamp_ms": 8281, "frame_width": 640, "frame_height": 480}, "detections": [], "error": null}
+{"status": "ok", "metadata": {"source_id": "0", "frame_index": 165, "timestamp_ms": 8781, "frame_width": 640, "frame_height": 480}, "detections": [], "error": null}
+{"status": "ok", "metadata": {"source_id": "0", "frame_index": 181, "timestamp_ms": 9312, "frame_width": 640, "frame_height": 480}, "detections": [], "error": null}
+{"status": "ok", "metadata": {"source_id": "0", "frame_index": 196, "timestamp_ms": 9797, "frame_width": 640, "frame_height": 480}, "detections": [], "error": null}
+{"status": "ok", "metadata": {"source_id": "0", "frame_index": 211, "timestamp_ms": 10328, "frame_width": 640, "frame_height": 480}, "detections": [], "error": null}
+{"status": "ok", "metadata": {"source_id": "0", "frame_index": 225, "timestamp_ms": 10797, "frame_width": 640, "frame_height": 480}, "detections": [], "error": null}
+{"status": "ok", "metadata": {"source_id": "0", "frame_index": 238, "timestamp_ms": 11312, "frame_width": 640, "frame_height": 480}, "detections": [], "error": null}
+{"status": "ok", "metadata": {"source_id": "0", "frame_index": 253, "timestamp_ms": 11797, "frame_width": 640, "frame_height": 480}, "detections": [], "error": null}
+{"status": "ok", "metadata": {"source_id": "0", "frame_index": 268, "timestamp_ms": 12328, "frame_width": 640, "frame_height": 480}, "detections": [], "error": null}
+{"status": "ok", "metadata": {"source_id": "0", "frame_index": 279, "timestamp_ms": 12797, "frame_width": 640, "frame_height": 480}, "detections": [], "error": null}
+{"status": "ok", "metadata": {"source_id": "0", "frame_index": 294, "timestamp_ms": 13281, "frame_width": 640, "frame_height": 480}, "detections": [], "error": null}
+{"status": "ok", "metadata": {"source_id": "0", "frame_index": 306, "timestamp_ms": 13781, "frame_width": 640, "frame_height": 480}, "detections": [], "error": null}
+{"status": "ok", "metadata": {"source_id": "0", "frame_index": 321, "timestamp_ms": 14281, "frame_width": 640, "frame_height": 480}, "detections": [], "error": null}
+{"status": "ok", "metadata": {"source_id": "0", "frame_index": 336, "timestamp_ms": 14781, "frame_width": 640, "frame_height": 480}, "detections": [{"behavior": "sleeping", "class_id": 0, "confidence": 0.4117, "bbox_xyxy_px": [205, 241, 277, 319], "frame_index": 336, "timestamp_ms": 14781, "track_id": null}], "error": null}

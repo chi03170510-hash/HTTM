@@ -1,0 +1,11 @@
+{
+  "protected_file_count": 164,
+  "changed_protected_files": [],
+  "git_index_unchanged": true,
+  "added_status_lines": [
+    "?? reports/round3_webcam_audit_20261104/"
+  ],
+  "removed_status_lines": [],
+  "checkpoint_sha256": "6821a02bbe1dde7deea8a7936766d93a99bc07b6b77db804ade563d497492965",
+  "scope": "Code, original model weights, databases and original session images/manifests were hashed before and after analysis. Only the new report directory was created. No training, new inference, threshold, FPS or pipeline edits."
+}

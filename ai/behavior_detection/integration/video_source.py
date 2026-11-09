@@ -1,6 +1,7 @@
 """OpenCV video/webcam reader with zero-based frame indices."""
 
 from dataclasses import dataclass
+import math
 from pathlib import Path
 from time import monotonic
 from typing import Any, Callable, Optional, Union
@@ -40,6 +41,21 @@ class VideoSource:
         self._started_ms = None
         self._is_webcam = isinstance(source, int)
 
+    @property
+    def is_live(self) -> bool:
+        return self._is_webcam or str(self.source).lower().startswith(
+            ("http://", "https://", "rtsp://", "rtmp://", "udp://", "tcp://")
+        )
+
+    @property
+    def fps(self) -> float:
+        """Native capture FPS, or a 30 FPS fallback for missing metadata."""
+        if self._capture is not None and self._cv2 is not None:
+            value = float(self._capture.get(self._cv2.CAP_PROP_FPS))
+            if math.isfinite(value) and value > 0:
+                return value
+        return 30.0
+
     def open(self) -> "VideoSource":
         if self._capture is not None:
             return self
@@ -60,7 +76,7 @@ class VideoSource:
             self.open()
         ok, frame = self._capture.read()
         if not ok or frame is None:
-            if not self._is_webcam:
+            if not self.is_live:
                 count = int(self._capture.get(self._cv2.CAP_PROP_FRAME_COUNT)) if self._cv2 else 0
                 position = int(self._capture.get(self._cv2.CAP_PROP_POS_FRAMES)) if self._cv2 else 0
                 if count > 0 and position >= count:
@@ -87,10 +103,10 @@ class VideoSource:
         return packet
 
     def _timestamp_ms(self) -> int:
-        if not self._is_webcam and self._cv2 is not None:
+        if not self.is_live and self._cv2 is not None:
             position_ms = float(self._capture.get(self._cv2.CAP_PROP_POS_MSEC))
-            if position_ms >= 0:
-                return int(position_ms)
+            fallback_ms = self._frame_index / self.fps * 1000.0
+            return int(max(position_ms, fallback_ms)) if math.isfinite(position_ms) else int(fallback_ms)
         now = self._clock_ms()
         return max(0, int(now - (self._started_ms if self._started_ms is not None else now)))
 

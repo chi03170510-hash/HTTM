@@ -1,0 +1,103 @@
+.camera-feed {
+  position: relative;
+  width: 100%;
+  border-radius: 16px;
+  overflow: hidden;
+  background: #0a0e1a;
+  box-shadow:
+    0 0 0 1px rgba(255, 255, 255, 0.06),
+    0 24px 48px rgba(0, 0, 0, 0.5);
+}
+
+/* Tỉ lệ khung hình 4:3 cho camera */
+.camera-feed__wrapper {
+  position: relative;
+  width: 100%;
+  aspect-ratio: 4 / 3;
+}
+
+.camera-feed__video {
+  display: block;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+/* Canvas overlay tuyệt đối chồng lên video */
+.camera-feed__canvas {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  pointer-events: none; /* Không chặn click vào bên dưới */
+}
+
+/* Màn hình placeholder khi camera tắt */
+.camera-feed__placeholder {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 12px;
+  background: radial-gradient(ellipse at center, #1a2035 0%, #0a0e1a 70%);
+}
+
+.camera-feed__placeholder-icon {
+  width: 72px;
+  height: 72px;
+  color: #334155;
+  opacity: 0.6;
+}
+
+.camera-feed__placeholder-icon svg {
+  width: 100%;
+  height: 100%;
+}
+
+.camera-feed__placeholder-text {
+  font-size: 1rem;
+  font-weight: 600;
+  color: #64748b;
+  margin: 0;
+}
+
+.camera-feed__placeholder-subtext {
+  font-size: 0.8rem;
+  color: #475569;
+  margin: 0;
+}
+
+/* Badge "LIVE" góc trên bên phải */
+.camera-feed__badge {
+  position: absolute;
+  top: 12px;
+  right: 12px;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  background: rgba(0, 0, 0, 0.55);
+  backdrop-filter: blur(8px);
+  border: 1px solid rgba(239, 68, 68, 0.4);
+  border-radius: 20px;
+  padding: 4px 10px;
+  font-size: 0.7rem;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  color: #ef4444;
+  pointer-events: none;
+}
+
+.camera-feed__badge-dot {
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  background: #ef4444;
+  animation: camera-pulse 1.5s ease-in-out infinite;
+}
+
+@keyframes camera-pulse {
+  0%, 100% { opacity: 1; transform: scale(1); }
+  50% { opacity: 0.4; transform: scale(0.75); }
+}

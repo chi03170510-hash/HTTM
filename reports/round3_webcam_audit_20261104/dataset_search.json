@@ -1,0 +1,82 @@
+{
+  "dataset_directory_exists": false,
+  "round3_recipe_path_exists": false,
+  "working_tree_yaml_or_zip_artifacts": [],
+  "reachable_unique_ref_tips": [
+    {
+      "ref": "refs/heads/Chi",
+      "commit": "09a4357a1847781e2b925aa0cf5d1ad8a7e48010",
+      "scoped_file_count": 90,
+      "matches": []
+    },
+    {
+      "ref": "refs/heads/Thien",
+      "commit": "5c7f4e31a9d909b5c905e49e6f1d669dc37efe23",
+      "scoped_file_count": 7,
+      "matches": []
+    },
+    {
+      "ref": "refs/heads/backup/Chi-before-AIv2",
+      "commit": "1d50536f0598ff09dfd5966e7c0cbb5d905e601c",
+      "scoped_file_count": 66,
+      "matches": []
+    },
+    {
+      "ref": "refs/heads/main",
+      "commit": "c72a8622190febd7f51d1b66cc3d5092b00dc866",
+      "scoped_file_count": 0,
+      "matches": []
+    },
+    {
+      "ref": "refs/remotes/origin/Thien",
+      "commit": "5cf0419687d0f90abead945550c243b898965014",
+      "scoped_file_count": 29,
+      "matches": []
+    },
+    {
+      "ref": "refs/remotes/origin/Uyen",
+      "commit": "03da63cf87b33f940a41617cdc3c6c31c6cd18e9",
+      "scoped_file_count": 7,
+      "matches": []
+    },
+    {
+      "ref": "refs/remotes/origin/duc",
+      "commit": "706d5b2574f0312c29e1d048b07f87c2e6f090fe",
+      "scoped_file_count": 7,
+      "matches": []
+    },
+    {
+      "ref": "refs/remotes/origin/feature/httm-ai-v2",
+      "commit": "e5ffb68e1af8751771820b3a2fd6764460bfebbc",
+      "scoped_file_count": 27,
+      "matches": []
+    }
+  ],
+  "reachable_git_history_matching_paths": [],
+  "not_searched": "Unreachable Git objects, deleted external files, external accounts, or unmounted drives",
+  "additional_whole_working_tree_search": {
+    "excluded": [
+      ".git",
+      ".venv",
+      "node_modules",
+      "reports/round3_webcam_audit_20261104"
+    ],
+    "extensions_and_names": [
+      "*.yaml",
+      "*.yml",
+      "*.zip",
+      "*.7z",
+      "*.tar",
+      "*.rar",
+      "args.*",
+      "*round3*"
+    ],
+    "matches": [
+      "results/T05_round3.jsonl",
+      "results/T08_round3.mp4",
+      "results/T08_round3.jsonl",
+      "results/T05_round3.mp4"
+    ],
+    "interpretation": "Only earlier evaluation recordings/logs found; no training YAML/archive/recipe was located."
+  }
+}

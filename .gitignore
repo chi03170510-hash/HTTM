@@ -58,8 +58,12 @@ cover/
 # Django stuff:
 *.log
 local_settings.py
-db.sqlite3
-db.sqlite3-journal
+*.db
+*.db-*
+*.sqlite
+*.sqlite-*
+*.sqlite3
+*.sqlite3-*
 
 # Flask stuff:
 instance/
@@ -149,8 +153,12 @@ activemq-data/
 
 # Environments
 .env
+.env.*
+!.env.example
+!.env.sample
+!.env.template
 .envrc
-.venv
+.venv/
 env/
 venv/
 ENV/
@@ -216,6 +224,48 @@ __marimo__/
 
 # Streamlit
 .streamlit/secrets.toml
+
+# Eye detection local test data
+ai/eye_detection/data/test_eye.mp4
+ai/eye_detection/data/ear_test.csv
+
+# Uploaded images & snapshots
+backend/uploads/**
+!backend/uploads/violations/
+!backend/uploads/violations/.gitkeep
+node_modules/
+
+# ==============================
+# Behavior Detection
+# ==============================
+
+# Dataset / label review
+ai/behavior_detection/datasets/
+ai/behavior_detection/label_review/
+ai/behavior_detection/label_preview/
+
+# YOLO training outputs
+ai/behavior_detection/runs/
+
+# Test data / generated results
+ai/behavior_detection/test_images/
+ai/behavior_detection/test_results/
+ai/behavior_detection/test_videos/
+ai/behavior_detection/video_results/
+
+# YOLO weights: training artifacts and release-distributed V2 stay local
+*.pt
+
+# Keep the existing versioned behavior checkpoints
+!ai/behavior_detection/models/best.pt
+!ai/behavior_detection/models/best_behavior_v1_4.pt
+
+# Camera logs and screenshots
+ai/behavior_detection/logs/
+
+# Opt-in camera debug images and generated reports
+/results/debug_frames/
+
 # HTTM AI V2 source inputs and generated evaluation outputs (not source deliverables)
 ai/behavior_detection/dataset_sources_new/
 ai/behavior_detection/experiments/accuracy_first_development/datasets/

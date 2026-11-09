@@ -1,0 +1,127 @@
+/* Reuse all monitor-page styles by applying same classes */
+.history-page {
+  min-height: 100vh;
+  background: #f0f4f8;
+  display: flex;
+  flex-direction: column;
+  font-family: 'Inter', system-ui, sans-serif;
+}
+
+/* ── Topbar ── */
+.history-page__topbar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0 24px;
+  height: 56px;
+  background: #ffffff;
+  border-bottom: 1px solid #e2e8f0;
+  flex-shrink: 0;
+}
+
+.history-page__topbar-left { display: flex; align-items: center; gap: 32px; }
+
+.history-page__logo {
+  display: flex; align-items: center; gap: 8px;
+  font-size: 1rem; font-weight: 800; letter-spacing: 0.06em; color: #0f172a;
+}
+
+.history-page__logo svg { width: 26px; height: 26px; color: #3b82f6; }
+
+.history-page__nav { display: flex; gap: 4px; }
+
+.history-page__nav-link {
+  padding: 5px 14px;
+  border-radius: 20px;
+  font-size: 0.83rem;
+  font-weight: 500;
+  color: #64748b;
+  text-decoration: none;
+  transition: all 0.15s;
+  border: 1px solid transparent;
+}
+
+.history-page__nav-link:hover { color: #0f172a; background: #f1f5f9; }
+.history-page__nav-link--active {
+  background: #f1f5f9; border-color: #e2e8f0; color: #0f172a; font-weight: 600;
+}
+
+.history-page__topbar-right { display: flex; align-items: center; gap: 12px; }
+
+.history-page__icon-btn {
+  width: 36px; height: 36px; display: flex; align-items: center; justify-content: center;
+  border: 1px solid #e2e8f0; border-radius: 8px; background: #f8fafc; color: #64748b;
+  cursor: pointer; transition: all 0.15s;
+}
+
+.history-page__icon-btn svg { width: 18px; height: 18px; }
+.history-page__icon-btn:hover { background: #f1f5f9; color: #0f172a; }
+
+.history-page__user { display: flex; align-items: center; gap: 10px; }
+
+.history-page__user-info { text-align: right; }
+.history-page__user-name { display: block; font-size: 0.82rem; font-weight: 600; color: #0f172a; line-height: 1.2; }
+.history-page__user-room { display: block; font-size: 0.73rem; color: #64748b; }
+
+.history-page__avatar {
+  width: 34px; height: 34px; border-radius: 50%;
+  background: linear-gradient(135deg, #3b82f6, #6366f1);
+  color: #fff; font-size: 0.75rem; font-weight: 700;
+  display: flex; align-items: center; justify-content: center;
+  letter-spacing: 0.02em; flex-shrink: 0;
+}
+
+/* ── Session Banner ── */
+.history-page__session-banner {
+  display: flex; align-items: center; justify-content: space-between;
+  padding: 10px 24px;
+  background: #ffffff;
+  border-bottom: 1px solid #e2e8f0;
+  flex-shrink: 0;
+}
+
+.history-page__session-left { display: flex; align-items: center; gap: 16px; }
+
+.history-page__room-badge {
+  display: inline-flex; align-items: center; gap: 6px;
+  background: #fee2e2; color: #dc2626;
+  font-size: 0.78rem; font-weight: 700; padding: 4px 12px; border-radius: 20px; letter-spacing: 0.05em;
+}
+
+.history-page__room-dot {
+  width: 7px; height: 7px; border-radius: 50%; background: #ef4444;
+  animation: hist-pulse-dot 1.5s infinite;
+}
+
+@keyframes hist-pulse-dot { 0%, 100% { opacity: 1; } 50% { opacity: 0.3; } }
+
+.history-page__session-time {
+  display: flex; align-items: center; gap: 6px; font-size: 0.82rem; color: #64748b;
+}
+
+.history-page__session-time svg { width: 14px; height: 14px; color: #94a3b8; }
+
+.history-page__session-right { display: flex; gap: 8px; }
+
+.history-page__session-btn {
+  display: inline-flex; align-items: center; gap: 6px;
+  padding: 5px 14px; border-radius: 8px; border: 1px solid #e2e8f0;
+  background: #f8fafc; color: #64748b; font-size: 0.8rem; font-weight: 500;
+  cursor: pointer; transition: all 0.15s;
+}
+
+.history-page__session-btn svg { width: 12px; height: 12px; }
+.history-page__session-btn:hover { background: #f1f5f9; color: #0f172a; }
+.history-page__session-btn--active {
+  background: #eff6ff; border-color: #93c5fd; color: #1d4ed8; font-weight: 600;
+}
+
+/* ── Main ── */
+.history-page__main {
+  flex: 1;
+  padding: 24px;
+  max-width: 1100px;
+  width: 100%;
+  margin: 0 auto;
+  box-sizing: border-box;
+}
