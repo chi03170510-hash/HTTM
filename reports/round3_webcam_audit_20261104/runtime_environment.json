@@ -1,0 +1,8 @@
+{
+  "python": "3.11.9 (tags/v3.11.9:de54cf5, Apr  2 2024, 10:12:12) [MSC v.1938 64 bit (AMD64)]",
+  "ultralytics": "8.4.172",
+  "torch": "2.14.1+cpu",
+  "opencv": "4.11.0",
+  "numpy": "2.4.6",
+  "cuda_available": false
+}

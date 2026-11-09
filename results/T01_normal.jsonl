@@ -1,0 +1,26 @@
+{"status": "ok", "metadata": {"source_id": "0", "frame_index": 0, "timestamp_ms": 282, "frame_width": 640, "frame_height": 480}, "detections": [], "error": null}
+{"status": "ok", "metadata": {"source_id": "0", "frame_index": 1, "timestamp_ms": 2860, "frame_width": 640, "frame_height": 480}, "detections": [], "error": null}
+{"status": "ok", "metadata": {"source_id": "0", "frame_index": 13, "timestamp_ms": 3297, "frame_width": 640, "frame_height": 480}, "detections": [], "error": null}
+{"status": "ok", "metadata": {"source_id": "0", "frame_index": 25, "timestamp_ms": 3797, "frame_width": 640, "frame_height": 480}, "detections": [{"behavior": "sleeping", "class_id": 0, "confidence": 0.4006, "bbox_xyxy_px": [198, 138, 568, 477], "frame_index": 25, "timestamp_ms": 3797, "track_id": null}], "error": null}
+{"status": "ok", "metadata": {"source_id": "0", "frame_index": 37, "timestamp_ms": 4329, "frame_width": 640, "frame_height": 480}, "detections": [{"behavior": "sleeping", "class_id": 0, "confidence": 0.4629, "bbox_xyxy_px": [160, 162, 620, 478], "frame_index": 37, "timestamp_ms": 4329, "track_id": null}], "error": null}
+{"status": "ok", "metadata": {"source_id": "0", "frame_index": 48, "timestamp_ms": 4782, "frame_width": 640, "frame_height": 480}, "detections": [], "error": null}
+{"status": "ok", "metadata": {"source_id": "0", "frame_index": 57, "timestamp_ms": 5282, "frame_width": 640, "frame_height": 480}, "detections": [], "error": null}
+{"status": "ok", "metadata": {"source_id": "0", "frame_index": 69, "timestamp_ms": 5782, "frame_width": 640, "frame_height": 480}, "detections": [], "error": null}
+{"status": "ok", "metadata": {"source_id": "0", "frame_index": 82, "timestamp_ms": 6313, "frame_width": 640, "frame_height": 480}, "detections": [], "error": null}
+{"status": "ok", "metadata": {"source_id": "0", "frame_index": 94, "timestamp_ms": 6797, "frame_width": 640, "frame_height": 480}, "detections": [{"behavior": "sleeping", "class_id": 0, "confidence": 0.4114, "bbox_xyxy_px": [148, 147, 627, 478], "frame_index": 94, "timestamp_ms": 6797, "track_id": null}], "error": null}
+{"status": "ok", "metadata": {"source_id": "0", "frame_index": 106, "timestamp_ms": 7282, "frame_width": 640, "frame_height": 480}, "detections": [{"behavior": "sleeping", "class_id": 0, "confidence": 0.4859, "bbox_xyxy_px": [157, 152, 624, 478], "frame_index": 106, "timestamp_ms": 7282, "track_id": null}], "error": null}
+{"status": "ok", "metadata": {"source_id": "0", "frame_index": 117, "timestamp_ms": 7782, "frame_width": 640, "frame_height": 480}, "detections": [{"behavior": "sleeping", "class_id": 0, "confidence": 0.4596, "bbox_xyxy_px": [130, 139, 580, 479], "frame_index": 117, "timestamp_ms": 7782, "track_id": null}], "error": null}
+{"status": "ok", "metadata": {"source_id": "0", "frame_index": 130, "timestamp_ms": 8313, "frame_width": 640, "frame_height": 480}, "detections": [{"behavior": "sleeping", "class_id": 0, "confidence": 0.4799, "bbox_xyxy_px": [140, 145, 560, 478], "frame_index": 130, "timestamp_ms": 8313, "track_id": null}], "error": null}
+{"status": "ok", "metadata": {"source_id": "0", "frame_index": 142, "timestamp_ms": 8797, "frame_width": 640, "frame_height": 480}, "detections": [], "error": null}
+{"status": "ok", "metadata": {"source_id": "0", "frame_index": 154, "timestamp_ms": 9297, "frame_width": 640, "frame_height": 480}, "detections": [], "error": null}
+{"status": "ok", "metadata": {"source_id": "0", "frame_index": 166, "timestamp_ms": 9797, "frame_width": 640, "frame_height": 480}, "detections": [], "error": null}
+{"status": "ok", "metadata": {"source_id": "0", "frame_index": 178, "timestamp_ms": 10329, "frame_width": 640, "frame_height": 480}, "detections": [], "error": null}
+{"status": "ok", "metadata": {"source_id": "0", "frame_index": 189, "timestamp_ms": 10782, "frame_width": 640, "frame_height": 480}, "detections": [], "error": null}
+{"status": "ok", "metadata": {"source_id": "0", "frame_index": 202, "timestamp_ms": 11313, "frame_width": 640, "frame_height": 480}, "detections": [], "error": null}
+{"status": "ok", "metadata": {"source_id": "0", "frame_index": 214, "timestamp_ms": 11797, "frame_width": 640, "frame_height": 480}, "detections": [], "error": null}
+{"status": "ok", "metadata": {"source_id": "0", "frame_index": 226, "timestamp_ms": 12329, "frame_width": 640, "frame_height": 480}, "detections": [], "error": null}
+{"status": "ok", "metadata": {"source_id": "0", "frame_index": 237, "timestamp_ms": 12782, "frame_width": 640, "frame_height": 480}, "detections": [], "error": null}
+{"status": "ok", "metadata": {"source_id": "0", "frame_index": 249, "timestamp_ms": 13282, "frame_width": 640, "frame_height": 480}, "detections": [], "error": null}
+{"status": "ok", "metadata": {"source_id": "0", "frame_index": 261, "timestamp_ms": 13782, "frame_width": 640, "frame_height": 480}, "detections": [], "error": null}
+{"status": "ok", "metadata": {"source_id": "0", "frame_index": 273, "timestamp_ms": 14282, "frame_width": 640, "frame_height": 480}, "detections": [], "error": null}
+{"status": "ok", "metadata": {"source_id": "0", "frame_index": 286, "timestamp_ms": 14797, "frame_width": 640, "frame_height": 480}, "detections": [], "error": null}

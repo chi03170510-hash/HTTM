@@ -1,0 +1,54 @@
+{
+  "session": "D:\\Study\\HTTM\\HTTM\\results\\debug_frames\\20261104_151557_514851_bf894a5b",
+  "model_hash_verified": "6821a02bbe1dde7deea8a7936766d93a99bc07b6b77db804ade563d497492965",
+  "runtime": {
+    "video_frames": 901,
+    "video_fps": 30.062128398690525,
+    "ai_target_fps": 1.0,
+    "ai_fps": 1.0020040080160288,
+    "processed_frames": 31,
+    "warmup_ms": 5537.208399999145
+  },
+  "processed_frames": 31,
+  "successful_frames": 31,
+  "no_yolo_candidate_frames": 29,
+  "no_phone_candidate_frames": 30,
+  "frames_with_any_low_confidence_candidate": 2,
+  "accepted_detections": 0,
+  "candidate_count_by_class": {
+    "sleeping": 5,
+    "using_phone": 1
+  },
+  "phone_candidates": [
+    {
+      "sample_index": 3,
+      "frame_index": 60,
+      "timestamp_ms": 2375,
+      "class_id": 1,
+      "class_name": "using_phone",
+      "confidence": 0.25315654277801514,
+      "official_threshold": 0.4,
+      "decision": "below_class_threshold",
+      "x1": 108.32600402832031,
+      "y1": 212.6468963623047,
+      "x2": 141.1347198486328,
+      "y2": 245.4341583251953,
+      "width_px": 32.8087158203125,
+      "height_px": 32.787261962890625,
+      "width_fraction": 0.051263618469238284,
+      "height_fraction": 0.06830679575602214,
+      "area_fraction": 0.0035016535164929035,
+      "raw_image": "raw/sample_000003_frame_0000000060_t000000002375ms.png"
+    }
+  ],
+  "first_timestamp_ms": 375,
+  "last_timestamp_ms": 30343,
+  "first_frame_mean_luma": 12.626214192708334,
+  "later_frame_mean_luma_range": [
+    113.79533203125,
+    121.79233072916666
+  ],
+  "input_dimensions_verified_count": 31,
+  "human_gt_boxes_available": false,
+  "not_accuracy_or_independent_recall": true
+}

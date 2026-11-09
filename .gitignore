@@ -263,6 +263,9 @@ ai/behavior_detection/video_results/
 # Camera logs and screenshots
 ai/behavior_detection/logs/
 
+# Opt-in camera debug images and generated reports
+/results/debug_frames/
+
 # HTTM AI V2 source inputs and generated evaluation outputs (not source deliverables)
 ai/behavior_detection/dataset_sources_new/
 ai/behavior_detection/experiments/accuracy_first_development/datasets/
