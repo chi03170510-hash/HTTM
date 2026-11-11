@@ -274,3 +274,8 @@ reports/experimental_v1_hybrid/
 reports/experimental_v2_hybrid/
 reports/experimental_v1_inference/
 reports/experimental_v2_inference/
+
+# Local face enrollment data - biometric information
+data/face_enrollment/
+
+/.venv-hybrid/

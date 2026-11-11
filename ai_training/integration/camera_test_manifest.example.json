@@ -1,0 +1,213 @@
+{
+  "schema": "httm_camera_test_manifest_v1",
+  "cases": [
+    {
+      "case_id": "S1",
+      "run": false,
+      "log": null,
+      "provenance": "unverified",
+      "frame_ids": [],
+      "ground_truth": {
+        "confirmed": false,
+        "verdict": "INCONCLUSIVE",
+        "reviewer": "",
+        "evidence": ""
+      }
+    },
+    {
+      "case_id": "S2",
+      "run": false,
+      "log": null,
+      "provenance": "unverified",
+      "frame_ids": [],
+      "ground_truth": {
+        "confirmed": false,
+        "verdict": "INCONCLUSIVE",
+        "reviewer": "",
+        "evidence": ""
+      }
+    },
+    {
+      "case_id": "S3",
+      "run": false,
+      "log": null,
+      "provenance": "unverified",
+      "frame_ids": [],
+      "ground_truth": {
+        "confirmed": false,
+        "verdict": "INCONCLUSIVE",
+        "reviewer": "",
+        "evidence": ""
+      }
+    },
+    {
+      "case_id": "S4",
+      "run": false,
+      "log": null,
+      "provenance": "unverified",
+      "frame_ids": [],
+      "ground_truth": {
+        "confirmed": false,
+        "verdict": "INCONCLUSIVE",
+        "reviewer": "",
+        "evidence": ""
+      }
+    },
+    {
+      "case_id": "S5",
+      "run": false,
+      "log": null,
+      "provenance": "unverified",
+      "frame_ids": [],
+      "ground_truth": {
+        "confirmed": false,
+        "verdict": "INCONCLUSIVE",
+        "reviewer": "",
+        "evidence": ""
+      }
+    },
+    {
+      "case_id": "P1",
+      "run": false,
+      "log": null,
+      "provenance": "unverified",
+      "frame_ids": [],
+      "ground_truth": {
+        "confirmed": false,
+        "verdict": "INCONCLUSIVE",
+        "reviewer": "",
+        "evidence": ""
+      }
+    },
+    {
+      "case_id": "P2",
+      "run": false,
+      "log": null,
+      "provenance": "unverified",
+      "frame_ids": [],
+      "ground_truth": {
+        "confirmed": false,
+        "verdict": "INCONCLUSIVE",
+        "reviewer": "",
+        "evidence": ""
+      }
+    },
+    {
+      "case_id": "P3",
+      "run": false,
+      "log": null,
+      "provenance": "unverified",
+      "frame_ids": [],
+      "ground_truth": {
+        "confirmed": false,
+        "verdict": "INCONCLUSIVE",
+        "reviewer": "",
+        "evidence": ""
+      }
+    },
+    {
+      "case_id": "P4",
+      "run": false,
+      "log": null,
+      "provenance": "unverified",
+      "frame_ids": [],
+      "ground_truth": {
+        "confirmed": false,
+        "verdict": "INCONCLUSIVE",
+        "reviewer": "",
+        "evidence": ""
+      }
+    },
+    {
+      "case_id": "P5",
+      "run": false,
+      "log": null,
+      "provenance": "unverified",
+      "frame_ids": [],
+      "ground_truth": {
+        "confirmed": false,
+        "verdict": "INCONCLUSIVE",
+        "reviewer": "",
+        "evidence": ""
+      }
+    },
+    {
+      "case_id": "IC1",
+      "run": false,
+      "log": null,
+      "provenance": "unverified",
+      "frame_ids": [],
+      "ground_truth": {
+        "confirmed": false,
+        "verdict": "INCONCLUSIVE",
+        "reviewer": "",
+        "evidence": ""
+      }
+    },
+    {
+      "case_id": "IC2",
+      "run": false,
+      "log": null,
+      "provenance": "unverified",
+      "frame_ids": [],
+      "ground_truth": {
+        "confirmed": false,
+        "verdict": "INCONCLUSIVE",
+        "reviewer": "",
+        "evidence": ""
+      }
+    },
+    {
+      "case_id": "IC3",
+      "run": false,
+      "log": null,
+      "provenance": "unverified",
+      "frame_ids": [],
+      "ground_truth": {
+        "confirmed": false,
+        "verdict": "INCONCLUSIVE",
+        "reviewer": "",
+        "evidence": ""
+      }
+    },
+    {
+      "case_id": "IC4",
+      "run": false,
+      "log": null,
+      "provenance": "unverified",
+      "frame_ids": [],
+      "ground_truth": {
+        "confirmed": false,
+        "verdict": "INCONCLUSIVE",
+        "reviewer": "",
+        "evidence": ""
+      }
+    },
+    {
+      "case_id": "IC5",
+      "run": false,
+      "log": null,
+      "provenance": "unverified",
+      "frame_ids": [],
+      "ground_truth": {
+        "confirmed": false,
+        "verdict": "INCONCLUSIVE",
+        "reviewer": "",
+        "evidence": ""
+      }
+    },
+    {
+      "case_id": "IC6",
+      "run": false,
+      "log": null,
+      "provenance": "unverified",
+      "frame_ids": [],
+      "ground_truth": {
+        "confirmed": false,
+        "verdict": "INCONCLUSIVE",
+        "reviewer": "",
+        "evidence": ""
+      }
+    }
+  ]
+}

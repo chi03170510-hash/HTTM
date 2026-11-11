@@ -14,8 +14,9 @@ from src.hybrid_v3 import BEHAVIORS, infer_v3
 from src.hybrid_v7 import (prepare_objects_v7, spatial_v7, add_sleeping_highres_proposals_v7)
 from src.hybrid_v6_1 import (debug_evidence_rows_v6, debug_sidecar_v6)
 from src.object_evidence import UsingPhonePrototype
+from src.behavior_checkpoint import behavior_checkpoint_path
 
-IMAGES=AI/"test_images"; WEIGHTS=AI/"models/best_behavior_v2.pt"
+IMAGES=AI/"test_images"
 CONFIG=AI/"config/hybrid_v7.json"; FACE=AI/"models/face_landmarker.task"
 EXTS={".jpg",".jpeg",".png",".bmp",".webp",".tif",".tiff"}
 
@@ -61,12 +62,14 @@ def draw_clean_label(img,text,box,color,occupied):
 
 def main():
     ap=argparse.ArgumentParser(description=__doc__)
-    ap.add_argument("--images",type=Path,default=IMAGES);ap.add_argument("--weights",type=Path,default=WEIGHTS)
+    ap.add_argument("--images",type=Path,default=IMAGES);ap.add_argument("--weights",type=Path,
+        help="Explicit checkpoint; otherwise use HTTM_BEHAVIOR_CHECKPOINT or V1.4")
     ap.add_argument("--face-model",type=Path,default=FACE);ap.add_argument("--config",type=Path,default=CONFIG)
     ap.add_argument("--output-dir",type=Path,default=AI/"runs"/f"hybrid_v7_{time.strftime('%Y%m%d_%H%M%S')}")
     ap.add_argument("--device",default="0" if __import__("torch").cuda.is_available() else "cpu")
     ap.add_argument("--imgsz",type=int,default=640);ap.add_argument("--iou",type=float,default=.50)
     a=ap.parse_args()
+    if a.weights is None:a.weights=behavior_checkpoint_path()
     for f in (a.images,a.weights,a.face_model,a.config):
         if not f.exists():raise FileNotFoundError(f)
     files=sorted(x for x in a.images.rglob("*") if x.is_file() and x.suffix.lower() in EXTS)

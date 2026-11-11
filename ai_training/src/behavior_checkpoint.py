@@ -1,0 +1,22 @@
+"""Select an existing behavior checkpoint without changing inference settings."""
+
+import os
+from pathlib import Path
+
+
+CHECKPOINT_ENV = "HTTM_BEHAVIOR_CHECKPOINT"
+DEFAULT_CHECKPOINT = "best_behavior_v1_4.pt"
+APPROVED_CHECKPOINTS = (DEFAULT_CHECKPOINT, "best_behavior_v2.pt")
+
+
+def behavior_checkpoint_path():
+    name = os.environ.get(CHECKPOINT_ENV, DEFAULT_CHECKPOINT)
+    if name not in APPROVED_CHECKPOINTS:
+        raise ValueError(
+            f"Invalid {CHECKPOINT_ENV}={name!r}: expected one of "
+            f"{APPROVED_CHECKPOINTS!r}. Unset it to use {DEFAULT_CHECKPOINT}."
+        )
+    path = Path(__file__).resolve().parents[1] / "models" / name
+    if not path.is_file():
+        raise FileNotFoundError(f"Behavior checkpoint not found: {path}")
+    return path

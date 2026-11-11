@@ -1,0 +1,1509 @@
+﻿[
+    {
+        "frame_id":  1,
+        "face_tracker":  {
+                             "schema":  "face_tracker_diagnostic_v1",
+                             "frame_id":  1,
+                             "captured_at":  10481.3162448,
+                             "face_tracker_updated_at":  10497.7559085,
+                             "face_update_gap":  null,
+                             "person_tracker_updated_at":  10497.7561337,
+                             "face_to_person_seconds":  0.0002252000012958888,
+                             "processing":  {
+                                                "face":  10.62913639999897,
+                                                "hybrid":  5.749264299998686
+                                            },
+                             "parameters":  {
+                                                "iou_threshold":  0.3,
+                                                "max_age":  4.0
+                                            },
+                             "next_id_before":  1,
+                             "next_id_after":  2,
+                             "face_detection_count":  1,
+                             "track_count_before":  0,
+                             "track_count_after":  1,
+                             "detections":  [
+                                                {
+                                                    "detection_index":  0,
+                                                    "face_bbox":  [
+                                                                      249,
+                                                                      100,
+                                                                      356,
+                                                                      246
+                                                                  ],
+                                                    "current_student_id":  "SV001",
+                                                    "recognition_score":  0.6855273246765137
+                                                }
+                                            ],
+                             "tracks_before":  [
+
+                                               ],
+                             "tracks_after":  [
+                                                  {
+                                                      "face_track_id":  1,
+                                                      "face_bbox":  [
+                                                                        249,
+                                                                        100,
+                                                                        356,
+                                                                        246
+                                                                    ],
+                                                      "last_seen":  10497.7559085,
+                                                      "age_seconds":  0.0,
+                                                      "stable_label":  "Unknown",
+                                                      "updated_in_frame":  true,
+                                                      "last_student_id":  "SV001",
+                                                      "recognition_score":  0.6855273246765137
+                                                  }
+                                              ],
+                             "candidate_ious":  [
+
+                                                ],
+                             "decisions":  [
+                                               {
+                                                   "face_track_id":  1,
+                                                   "action":  "new",
+                                                   "reason":  "no_eligible_live_track"
+                                               }
+                                           ],
+                             "mapping":  [
+                                             {
+                                                 "face_track_id":  1,
+                                                 "detection_indices":  [
+                                                                           0
+                                                                       ],
+                                                 "selection_ambiguous":  false,
+                                                 "associations":  [
+                                                                      {
+                                                                          "person_ref":  "person_0",
+                                                                          "person_track_id":  "P1",
+                                                                          "association_status":  "matched",
+                                                                          "student_id":  "SV001"
+                                                                      }
+                                                                  ]
+                                             }
+                                         ],
+                             "details_truncated":  false
+                         }
+    },
+    {
+        "frame_id":  2,
+        "face_tracker":  {
+                             "schema":  "face_tracker_diagnostic_v1",
+                             "frame_id":  2,
+                             "captured_at":  10497.7665934,
+                             "face_tracker_updated_at":  10501.5181439,
+                             "face_update_gap":  3.762235400001373,
+                             "person_tracker_updated_at":  10501.518559,
+                             "face_to_person_seconds":  0.00041509999937261455,
+                             "processing":  {
+                                                "face":  0.5052386999996088,
+                                                "hybrid":  3.1982805999996344
+                                            },
+                             "parameters":  {
+                                                "iou_threshold":  0.3,
+                                                "max_age":  4.0
+                                            },
+                             "next_id_before":  2,
+                             "next_id_after":  3,
+                             "face_detection_count":  2,
+                             "track_count_before":  1,
+                             "track_count_after":  2,
+                             "detections":  [
+                                                {
+                                                    "detection_index":  0,
+                                                    "face_bbox":  [
+                                                                      239,
+                                                                      120,
+                                                                      344,
+                                                                      265
+                                                                  ],
+                                                    "current_student_id":  "SV001",
+                                                    "recognition_score":  0.7066091299057007
+                                                },
+                                                {
+                                                    "detection_index":  1,
+                                                    "face_bbox":  [
+                                                                      78,
+                                                                      257,
+                                                                      144,
+                                                                      335
+                                                                  ],
+                                                    "current_student_id":  "Unknown",
+                                                    "recognition_score":  0.3333766758441925
+                                                }
+                                            ],
+                             "tracks_before":  [
+                                                   {
+                                                       "face_track_id":  1,
+                                                       "face_bbox":  [
+                                                                         249,
+                                                                         100,
+                                                                         356,
+                                                                         246
+                                                                     ],
+                                                       "last_seen":  10497.7559085,
+                                                       "age_seconds":  3.762235400001373,
+                                                       "stable_label":  "Unknown",
+                                                       "updated_in_frame":  false,
+                                                       "last_student_id":  "SV001",
+                                                       "recognition_score":  0.6855273246765137
+                                                   }
+                                               ],
+                             "tracks_after":  [
+                                                  {
+                                                      "face_track_id":  1,
+                                                      "face_bbox":  [
+                                                                        239,
+                                                                        120,
+                                                                        344,
+                                                                        265
+                                                                    ],
+                                                      "last_seen":  10501.5181439,
+                                                      "age_seconds":  0.0,
+                                                      "stable_label":  "Unknown",
+                                                      "updated_in_frame":  true,
+                                                      "last_student_id":  "SV001",
+                                                      "recognition_score":  0.7066091299057007
+                                                  },
+                                                  {
+                                                      "face_track_id":  2,
+                                                      "face_bbox":  [
+                                                                        78,
+                                                                        257,
+                                                                        144,
+                                                                        335
+                                                                    ],
+                                                      "last_seen":  10501.5181439,
+                                                      "age_seconds":  0.0,
+                                                      "stable_label":  "Unknown",
+                                                      "updated_in_frame":  true,
+                                                      "last_student_id":  "Unknown",
+                                                      "recognition_score":  0.3333766758441925
+                                                  }
+                                              ],
+                             "candidate_ious":  [
+                                                    {
+                                                        "face_track_id":  1,
+                                                        "detection_index":  0,
+                                                        "iou":  0.6341049954971658,
+                                                        "threshold_passed":  true,
+                                                        "considered_by_tracker":  true,
+                                                        "selected":  true
+                                                    },
+                                                    {
+                                                        "face_track_id":  1,
+                                                        "detection_index":  1,
+                                                        "iou":  0.0,
+                                                        "threshold_passed":  false,
+                                                        "considered_by_tracker":  true,
+                                                        "selected":  false
+                                                    }
+                                                ],
+                             "decisions":  [
+                                               {
+                                                   "face_track_id":  1,
+                                                   "action":  "matched",
+                                                   "reason":  "selected_by_tracker"
+                                               },
+                                               {
+                                                   "face_track_id":  2,
+                                                   "action":  "new",
+                                                   "reason":  "no_eligible_live_track"
+                                               }
+                                           ],
+                             "mapping":  [
+                                             {
+                                                 "face_track_id":  1,
+                                                 "detection_indices":  [
+                                                                           0
+                                                                       ],
+                                                 "selection_ambiguous":  false,
+                                                 "associations":  [
+                                                                      {
+                                                                          "person_ref":  "person_0",
+                                                                          "person_track_id":  "P1",
+                                                                          "association_status":  "matched",
+                                                                          "student_id":  "SV001"
+                                                                      }
+                                                                  ]
+                                             },
+                                             {
+                                                 "face_track_id":  2,
+                                                 "detection_indices":  [
+                                                                           1
+                                                                       ],
+                                                 "selection_ambiguous":  false,
+                                                 "associations":  [
+                                                                      {
+                                                                          "person_ref":  "person_1",
+                                                                          "person_track_id":  "P2",
+                                                                          "association_status":  "matched",
+                                                                          "student_id":  "Unknown"
+                                                                      }
+                                                                  ]
+                                             }
+                                         ],
+                             "details_truncated":  false
+                         }
+    },
+    {
+        "frame_id":  3,
+        "face_tracker":  {
+                             "schema":  "face_tracker_diagnostic_v1",
+                             "frame_id":  3,
+                             "captured_at":  10501.5131045,
+                             "face_tracker_updated_at":  10504.8438832,
+                             "face_update_gap":  3.3257392999985314,
+                             "person_tracker_updated_at":  10504.8444376,
+                             "face_to_person_seconds":  0.0005544000014197081,
+                             "processing":  {
+                                                "face":  0.43313690000104543,
+                                                "hybrid":  2.8403147000008175
+                                            },
+                             "parameters":  {
+                                                "iou_threshold":  0.3,
+                                                "max_age":  4.0
+                                            },
+                             "next_id_before":  3,
+                             "next_id_after":  4,
+                             "face_detection_count":  2,
+                             "track_count_before":  2,
+                             "track_count_after":  3,
+                             "detections":  [
+                                                {
+                                                    "detection_index":  0,
+                                                    "face_bbox":  [
+                                                                      312,
+                                                                      141,
+                                                                      404,
+                                                                      262
+                                                                  ],
+                                                    "current_student_id":  "SV001",
+                                                    "recognition_score":  0.7065365314483643
+                                                },
+                                                {
+                                                    "detection_index":  1,
+                                                    "face_bbox":  [
+                                                                      60,
+                                                                      250,
+                                                                      135,
+                                                                      344
+                                                                  ],
+                                                    "current_student_id":  "Unknown",
+                                                    "recognition_score":  0.3188716471195221
+                                                }
+                                            ],
+                             "tracks_before":  [
+                                                   {
+                                                       "face_track_id":  1,
+                                                       "face_bbox":  [
+                                                                         239,
+                                                                         120,
+                                                                         344,
+                                                                         265
+                                                                     ],
+                                                       "last_seen":  10501.5181439,
+                                                       "age_seconds":  3.3257392999985314,
+                                                       "stable_label":  "Unknown",
+                                                       "updated_in_frame":  false,
+                                                       "last_student_id":  "SV001",
+                                                       "recognition_score":  0.7066091299057007
+                                                   },
+                                                   {
+                                                       "face_track_id":  2,
+                                                       "face_bbox":  [
+                                                                         78,
+                                                                         257,
+                                                                         144,
+                                                                         335
+                                                                     ],
+                                                       "last_seen":  10501.5181439,
+                                                       "age_seconds":  3.3257392999985314,
+                                                       "stable_label":  "Unknown",
+                                                       "updated_in_frame":  false,
+                                                       "last_student_id":  "Unknown",
+                                                       "recognition_score":  0.3333766758441925
+                                                   }
+                                               ],
+                             "tracks_after":  [
+                                                  {
+                                                      "face_track_id":  1,
+                                                      "face_bbox":  [
+                                                                        239,
+                                                                        120,
+                                                                        344,
+                                                                        265
+                                                                    ],
+                                                      "last_seen":  10501.5181439,
+                                                      "age_seconds":  3.3257392999985314,
+                                                      "stable_label":  "Unknown",
+                                                      "updated_in_frame":  false,
+                                                      "last_student_id":  "SV001",
+                                                      "recognition_score":  0.7066091299057007
+                                                  },
+                                                  {
+                                                      "face_track_id":  2,
+                                                      "face_bbox":  [
+                                                                        60,
+                                                                        250,
+                                                                        135,
+                                                                        344
+                                                                    ],
+                                                      "last_seen":  10504.8438832,
+                                                      "age_seconds":  0.0,
+                                                      "stable_label":  "Unknown",
+                                                      "updated_in_frame":  true,
+                                                      "last_student_id":  "Unknown",
+                                                      "recognition_score":  0.3188716471195221
+                                                  },
+                                                  {
+                                                      "face_track_id":  3,
+                                                      "face_bbox":  [
+                                                                        312,
+                                                                        141,
+                                                                        404,
+                                                                        262
+                                                                    ],
+                                                      "last_seen":  10504.8438832,
+                                                      "age_seconds":  0.0,
+                                                      "stable_label":  "Unknown",
+                                                      "updated_in_frame":  true,
+                                                      "last_student_id":  "SV001",
+                                                      "recognition_score":  0.7065365314483643
+                                                  }
+                                              ],
+                             "candidate_ious":  [
+                                                    {
+                                                        "face_track_id":  1,
+                                                        "detection_index":  0,
+                                                        "iou":  0.17220369134978875,
+                                                        "threshold_passed":  false,
+                                                        "considered_by_tracker":  true,
+                                                        "selected":  false
+                                                    },
+                                                    {
+                                                        "face_track_id":  1,
+                                                        "detection_index":  1,
+                                                        "iou":  0.0,
+                                                        "threshold_passed":  false,
+                                                        "considered_by_tracker":  true,
+                                                        "selected":  false
+                                                    },
+                                                    {
+                                                        "face_track_id":  2,
+                                                        "detection_index":  0,
+                                                        "iou":  0.0,
+                                                        "threshold_passed":  false,
+                                                        "considered_by_tracker":  true,
+                                                        "selected":  false
+                                                    },
+                                                    {
+                                                        "face_track_id":  2,
+                                                        "detection_index":  1,
+                                                        "iou":  0.5735294117647058,
+                                                        "threshold_passed":  true,
+                                                        "considered_by_tracker":  true,
+                                                        "selected":  true
+                                                    }
+                                                ],
+                             "decisions":  [
+                                               {
+                                                   "face_track_id":  1,
+                                                   "action":  "unmatched_retained",
+                                                   "reason":  "no_eligible_iou"
+                                               },
+                                               {
+                                                   "face_track_id":  2,
+                                                   "action":  "matched",
+                                                   "reason":  "selected_by_tracker"
+                                               },
+                                               {
+                                                   "face_track_id":  3,
+                                                   "action":  "new",
+                                                   "reason":  "no_eligible_live_track"
+                                               }
+                                           ],
+                             "mapping":  [
+                                             {
+                                                 "face_track_id":  2,
+                                                 "detection_indices":  [
+                                                                           1
+                                                                       ],
+                                                 "selection_ambiguous":  false,
+                                                 "associations":  [
+                                                                      {
+                                                                          "person_ref":  "person_1",
+                                                                          "person_track_id":  "P2",
+                                                                          "association_status":  "matched",
+                                                                          "student_id":  "Unknown"
+                                                                      }
+                                                                  ]
+                                             },
+                                             {
+                                                 "face_track_id":  3,
+                                                 "detection_indices":  [
+                                                                           0
+                                                                       ],
+                                                 "selection_ambiguous":  false,
+                                                 "associations":  [
+                                                                      {
+                                                                          "person_ref":  "person_0",
+                                                                          "person_track_id":  "P1",
+                                                                          "association_status":  "matched",
+                                                                          "student_id":  "SV001"
+                                                                      }
+                                                                  ]
+                                             }
+                                         ],
+                             "details_truncated":  false
+                         }
+    },
+    {
+        "frame_id":  4,
+        "face_tracker":  {
+                             "schema":  "face_tracker_diagnostic_v1",
+                             "frame_id":  4,
+                             "captured_at":  10504.8558163,
+                             "face_tracker_updated_at":  10508.2257076,
+                             "face_update_gap":  3.3818244000012783,
+                             "person_tracker_updated_at":  10508.2261509,
+                             "face_to_person_seconds":  0.00044329999946057796,
+                             "processing":  {
+                                                "face":  0.5820432000000437,
+                                                "hybrid":  2.730473899999197
+                                            },
+                             "parameters":  {
+                                                "iou_threshold":  0.3,
+                                                "max_age":  4.0
+                                            },
+                             "next_id_before":  4,
+                             "next_id_after":  4,
+                             "face_detection_count":  2,
+                             "track_count_before":  3,
+                             "track_count_after":  2,
+                             "detections":  [
+                                                {
+                                                    "detection_index":  0,
+                                                    "face_bbox":  [
+                                                                      310,
+                                                                      141,
+                                                                      402,
+                                                                      261
+                                                                  ],
+                                                    "current_student_id":  "SV001",
+                                                    "recognition_score":  0.6599394083023071
+                                                },
+                                                {
+                                                    "detection_index":  1,
+                                                    "face_bbox":  [
+                                                                      60,
+                                                                      251,
+                                                                      135,
+                                                                      344
+                                                                  ],
+                                                    "current_student_id":  "Unknown",
+                                                    "recognition_score":  0.2969873547554016
+                                                }
+                                            ],
+                             "tracks_before":  [
+                                                   {
+                                                       "face_track_id":  1,
+                                                       "face_bbox":  [
+                                                                         239,
+                                                                         120,
+                                                                         344,
+                                                                         265
+                                                                     ],
+                                                       "last_seen":  10501.5181439,
+                                                       "age_seconds":  6.70756369999981,
+                                                       "stable_label":  "Unknown",
+                                                       "updated_in_frame":  false,
+                                                       "last_student_id":  "SV001",
+                                                       "recognition_score":  0.7066091299057007
+                                                   },
+                                                   {
+                                                       "face_track_id":  2,
+                                                       "face_bbox":  [
+                                                                         60,
+                                                                         250,
+                                                                         135,
+                                                                         344
+                                                                     ],
+                                                       "last_seen":  10504.8438832,
+                                                       "age_seconds":  3.3818244000012783,
+                                                       "stable_label":  "Unknown",
+                                                       "updated_in_frame":  false,
+                                                       "last_student_id":  "Unknown",
+                                                       "recognition_score":  0.3188716471195221
+                                                   },
+                                                   {
+                                                       "face_track_id":  3,
+                                                       "face_bbox":  [
+                                                                         312,
+                                                                         141,
+                                                                         404,
+                                                                         262
+                                                                     ],
+                                                       "last_seen":  10504.8438832,
+                                                       "age_seconds":  3.3818244000012783,
+                                                       "stable_label":  "Unknown",
+                                                       "updated_in_frame":  false,
+                                                       "last_student_id":  "SV001",
+                                                       "recognition_score":  0.7065365314483643
+                                                   }
+                                               ],
+                             "tracks_after":  [
+                                                  {
+                                                      "face_track_id":  2,
+                                                      "face_bbox":  [
+                                                                        60,
+                                                                        251,
+                                                                        135,
+                                                                        344
+                                                                    ],
+                                                      "last_seen":  10508.2257076,
+                                                      "age_seconds":  0.0,
+                                                      "stable_label":  "Unknown",
+                                                      "updated_in_frame":  true,
+                                                      "last_student_id":  "Unknown",
+                                                      "recognition_score":  0.2969873547554016
+                                                  },
+                                                  {
+                                                      "face_track_id":  3,
+                                                      "face_bbox":  [
+                                                                        310,
+                                                                        141,
+                                                                        402,
+                                                                        261
+                                                                    ],
+                                                      "last_seen":  10508.2257076,
+                                                      "age_seconds":  0.0,
+                                                      "stable_label":  "Unknown",
+                                                      "updated_in_frame":  true,
+                                                      "last_student_id":  "SV001",
+                                                      "recognition_score":  0.6599394083023071
+                                                  }
+                                              ],
+                             "candidate_ious":  [
+                                                    {
+                                                        "face_track_id":  1,
+                                                        "detection_index":  0,
+                                                        "iou":  0.1839080459770115,
+                                                        "threshold_passed":  false,
+                                                        "considered_by_tracker":  false,
+                                                        "selected":  false
+                                                    },
+                                                    {
+                                                        "face_track_id":  1,
+                                                        "detection_index":  1,
+                                                        "iou":  0.0,
+                                                        "threshold_passed":  false,
+                                                        "considered_by_tracker":  false,
+                                                        "selected":  false
+                                                    },
+                                                    {
+                                                        "face_track_id":  2,
+                                                        "detection_index":  0,
+                                                        "iou":  0.0,
+                                                        "threshold_passed":  false,
+                                                        "considered_by_tracker":  true,
+                                                        "selected":  false
+                                                    },
+                                                    {
+                                                        "face_track_id":  2,
+                                                        "detection_index":  1,
+                                                        "iou":  0.9893617021276596,
+                                                        "threshold_passed":  true,
+                                                        "considered_by_tracker":  true,
+                                                        "selected":  true
+                                                    },
+                                                    {
+                                                        "face_track_id":  3,
+                                                        "detection_index":  0,
+                                                        "iou":  0.9497010200492437,
+                                                        "threshold_passed":  true,
+                                                        "considered_by_tracker":  true,
+                                                        "selected":  true
+                                                    },
+                                                    {
+                                                        "face_track_id":  3,
+                                                        "detection_index":  1,
+                                                        "iou":  0.0,
+                                                        "threshold_passed":  false,
+                                                        "considered_by_tracker":  true,
+                                                        "selected":  false
+                                                    }
+                                                ],
+                             "decisions":  [
+                                               {
+                                                   "face_track_id":  1,
+                                                   "action":  "expired",
+                                                   "reason":  "age_exceeds_max_age"
+                                               },
+                                               {
+                                                   "face_track_id":  2,
+                                                   "action":  "matched",
+                                                   "reason":  "selected_by_tracker"
+                                               },
+                                               {
+                                                   "face_track_id":  3,
+                                                   "action":  "matched",
+                                                   "reason":  "selected_by_tracker"
+                                               }
+                                           ],
+                             "mapping":  [
+                                             {
+                                                 "face_track_id":  2,
+                                                 "detection_indices":  [
+                                                                           1
+                                                                       ],
+                                                 "selection_ambiguous":  false,
+                                                 "associations":  [
+                                                                      {
+                                                                          "person_ref":  "person_1",
+                                                                          "person_track_id":  "P2",
+                                                                          "association_status":  "matched",
+                                                                          "student_id":  "Unknown"
+                                                                      }
+                                                                  ]
+                                             },
+                                             {
+                                                 "face_track_id":  3,
+                                                 "detection_indices":  [
+                                                                           0
+                                                                       ],
+                                                 "selection_ambiguous":  false,
+                                                 "associations":  [
+                                                                      {
+                                                                          "person_ref":  "person_0",
+                                                                          "person_track_id":  "P1",
+                                                                          "association_status":  "matched",
+                                                                          "student_id":  "SV001"
+                                                                      }
+                                                                  ]
+                                             }
+                                         ],
+                             "details_truncated":  false
+                         }
+    },
+    {
+        "frame_id":  5,
+        "face_tracker":  {
+                             "schema":  "face_tracker_diagnostic_v1",
+                             "frame_id":  5,
+                             "captured_at":  10508.2514466,
+                             "face_tracker_updated_at":  10511.401179,
+                             "face_update_gap":  3.1754713999998785,
+                             "person_tracker_updated_at":  10511.401764,
+                             "face_to_person_seconds":  0.0005849999997735722,
+                             "processing":  {
+                                                "face":  0.531752900000356,
+                                                "hybrid":  2.581485900000189
+                                            },
+                             "parameters":  {
+                                                "iou_threshold":  0.3,
+                                                "max_age":  4.0
+                                            },
+                             "next_id_before":  4,
+                             "next_id_after":  5,
+                             "face_detection_count":  2,
+                             "track_count_before":  2,
+                             "track_count_after":  3,
+                             "detections":  [
+                                                {
+                                                    "detection_index":  0,
+                                                    "face_bbox":  [
+                                                                      306,
+                                                                      138,
+                                                                      400,
+                                                                      259
+                                                                  ],
+                                                    "current_student_id":  "SV001",
+                                                    "recognition_score":  0.7003443241119385
+                                                },
+                                                {
+                                                    "detection_index":  1,
+                                                    "face_bbox":  [
+                                                                      141,
+                                                                      276,
+                                                                      175,
+                                                                      337
+                                                                  ],
+                                                    "current_student_id":  "Unknown",
+                                                    "recognition_score":  0.17675569653511047
+                                                }
+                                            ],
+                             "tracks_before":  [
+                                                   {
+                                                       "face_track_id":  2,
+                                                       "face_bbox":  [
+                                                                         60,
+                                                                         251,
+                                                                         135,
+                                                                         344
+                                                                     ],
+                                                       "last_seen":  10508.2257076,
+                                                       "age_seconds":  3.1754713999998785,
+                                                       "stable_label":  "Unknown",
+                                                       "updated_in_frame":  false,
+                                                       "last_student_id":  "Unknown",
+                                                       "recognition_score":  0.2969873547554016
+                                                   },
+                                                   {
+                                                       "face_track_id":  3,
+                                                       "face_bbox":  [
+                                                                         310,
+                                                                         141,
+                                                                         402,
+                                                                         261
+                                                                     ],
+                                                       "last_seen":  10508.2257076,
+                                                       "age_seconds":  3.1754713999998785,
+                                                       "stable_label":  "Unknown",
+                                                       "updated_in_frame":  false,
+                                                       "last_student_id":  "SV001",
+                                                       "recognition_score":  0.6599394083023071
+                                                   }
+                                               ],
+                             "tracks_after":  [
+                                                  {
+                                                      "face_track_id":  2,
+                                                      "face_bbox":  [
+                                                                        60,
+                                                                        251,
+                                                                        135,
+                                                                        344
+                                                                    ],
+                                                      "last_seen":  10508.2257076,
+                                                      "age_seconds":  3.1754713999998785,
+                                                      "stable_label":  "Unknown",
+                                                      "updated_in_frame":  false,
+                                                      "last_student_id":  "Unknown",
+                                                      "recognition_score":  0.2969873547554016
+                                                  },
+                                                  {
+                                                      "face_track_id":  3,
+                                                      "face_bbox":  [
+                                                                        306,
+                                                                        138,
+                                                                        400,
+                                                                        259
+                                                                    ],
+                                                      "last_seen":  10511.401179,
+                                                      "age_seconds":  0.0,
+                                                      "stable_label":  "SV001",
+                                                      "updated_in_frame":  true,
+                                                      "last_student_id":  "SV001",
+                                                      "recognition_score":  0.7003443241119385
+                                                  },
+                                                  {
+                                                      "face_track_id":  4,
+                                                      "face_bbox":  [
+                                                                        141,
+                                                                        276,
+                                                                        175,
+                                                                        337
+                                                                    ],
+                                                      "last_seen":  10511.401179,
+                                                      "age_seconds":  0.0,
+                                                      "stable_label":  "Unknown",
+                                                      "updated_in_frame":  true,
+                                                      "last_student_id":  "Unknown",
+                                                      "recognition_score":  0.17675569653511047
+                                                  }
+                                              ],
+                             "candidate_ious":  [
+                                                    {
+                                                        "face_track_id":  2,
+                                                        "detection_index":  0,
+                                                        "iou":  0.0,
+                                                        "threshold_passed":  false,
+                                                        "considered_by_tracker":  true,
+                                                        "selected":  false
+                                                    },
+                                                    {
+                                                        "face_track_id":  2,
+                                                        "detection_index":  1,
+                                                        "iou":  0.0,
+                                                        "threshold_passed":  false,
+                                                        "considered_by_tracker":  true,
+                                                        "selected":  false
+                                                    },
+                                                    {
+                                                        "face_track_id":  3,
+                                                        "detection_index":  0,
+                                                        "iou":  0.9004578599287774,
+                                                        "threshold_passed":  true,
+                                                        "considered_by_tracker":  true,
+                                                        "selected":  true
+                                                    },
+                                                    {
+                                                        "face_track_id":  3,
+                                                        "detection_index":  1,
+                                                        "iou":  0.0,
+                                                        "threshold_passed":  false,
+                                                        "considered_by_tracker":  true,
+                                                        "selected":  false
+                                                    }
+                                                ],
+                             "decisions":  [
+                                               {
+                                                   "face_track_id":  2,
+                                                   "action":  "unmatched_retained",
+                                                   "reason":  "no_eligible_iou"
+                                               },
+                                               {
+                                                   "face_track_id":  3,
+                                                   "action":  "matched",
+                                                   "reason":  "selected_by_tracker"
+                                               },
+                                               {
+                                                   "face_track_id":  4,
+                                                   "action":  "new",
+                                                   "reason":  "no_eligible_live_track"
+                                               }
+                                           ],
+                             "mapping":  [
+                                             {
+                                                 "face_track_id":  3,
+                                                 "detection_indices":  [
+                                                                           0
+                                                                       ],
+                                                 "selection_ambiguous":  false,
+                                                 "associations":  [
+                                                                      {
+                                                                          "person_ref":  "person_0",
+                                                                          "person_track_id":  "P1",
+                                                                          "association_status":  "matched",
+                                                                          "student_id":  "SV001"
+                                                                      }
+                                                                  ]
+                                             },
+                                             {
+                                                 "face_track_id":  4,
+                                                 "detection_indices":  [
+                                                                           1
+                                                                       ],
+                                                 "selection_ambiguous":  false,
+                                                 "associations":  [
+                                                                      {
+                                                                          "person_ref":  "person_1",
+                                                                          "person_track_id":  "P2",
+                                                                          "association_status":  "matched",
+                                                                          "student_id":  "Unknown"
+                                                                      }
+                                                                  ]
+                                             }
+                                         ],
+                             "details_truncated":  false
+                         }
+    },
+    {
+        "frame_id":  6,
+        "face_tracker":  {
+                             "schema":  "face_tracker_diagnostic_v1",
+                             "frame_id":  6,
+                             "captured_at":  10511.4203318,
+                             "face_tracker_updated_at":  10514.0192978,
+                             "face_update_gap":  2.618118799999138,
+                             "person_tracker_updated_at":  10514.019722,
+                             "face_to_person_seconds":  0.0004241999995429069,
+                             "processing":  {
+                                                "face":  0.34797059999982594,
+                                                "hybrid":  2.216248300001098
+                                            },
+                             "parameters":  {
+                                                "iou_threshold":  0.3,
+                                                "max_age":  4.0
+                                            },
+                             "next_id_before":  5,
+                             "next_id_after":  5,
+                             "face_detection_count":  1,
+                             "track_count_before":  3,
+                             "track_count_after":  2,
+                             "detections":  [
+                                                {
+                                                    "detection_index":  0,
+                                                    "face_bbox":  [
+                                                                      283,
+                                                                      163,
+                                                                      365,
+                                                                      270
+                                                                  ],
+                                                    "current_student_id":  "SV001",
+                                                    "recognition_score":  0.6497241854667664
+                                                }
+                                            ],
+                             "tracks_before":  [
+                                                   {
+                                                       "face_track_id":  2,
+                                                       "face_bbox":  [
+                                                                         60,
+                                                                         251,
+                                                                         135,
+                                                                         344
+                                                                     ],
+                                                       "last_seen":  10508.2257076,
+                                                       "age_seconds":  5.7935901999990165,
+                                                       "stable_label":  "Unknown",
+                                                       "updated_in_frame":  false,
+                                                       "last_student_id":  "Unknown",
+                                                       "recognition_score":  0.2969873547554016
+                                                   },
+                                                   {
+                                                       "face_track_id":  3,
+                                                       "face_bbox":  [
+                                                                         306,
+                                                                         138,
+                                                                         400,
+                                                                         259
+                                                                     ],
+                                                       "last_seen":  10511.401179,
+                                                       "age_seconds":  2.618118799999138,
+                                                       "stable_label":  "SV001",
+                                                       "updated_in_frame":  false,
+                                                       "last_student_id":  "SV001",
+                                                       "recognition_score":  0.7003443241119385
+                                                   },
+                                                   {
+                                                       "face_track_id":  4,
+                                                       "face_bbox":  [
+                                                                         141,
+                                                                         276,
+                                                                         175,
+                                                                         337
+                                                                     ],
+                                                       "last_seen":  10511.401179,
+                                                       "age_seconds":  2.618118799999138,
+                                                       "stable_label":  "Unknown",
+                                                       "updated_in_frame":  false,
+                                                       "last_student_id":  "Unknown",
+                                                       "recognition_score":  0.17675569653511047
+                                                   }
+                                               ],
+                             "tracks_after":  [
+                                                  {
+                                                      "face_track_id":  3,
+                                                      "face_bbox":  [
+                                                                        283,
+                                                                        163,
+                                                                        365,
+                                                                        270
+                                                                    ],
+                                                      "last_seen":  10514.0192978,
+                                                      "age_seconds":  0.0,
+                                                      "stable_label":  "SV001",
+                                                      "updated_in_frame":  true,
+                                                      "last_student_id":  "SV001",
+                                                      "recognition_score":  0.6497241854667664
+                                                  },
+                                                  {
+                                                      "face_track_id":  4,
+                                                      "face_bbox":  [
+                                                                        141,
+                                                                        276,
+                                                                        175,
+                                                                        337
+                                                                    ],
+                                                      "last_seen":  10511.401179,
+                                                      "age_seconds":  2.618118799999138,
+                                                      "stable_label":  "Unknown",
+                                                      "updated_in_frame":  false,
+                                                      "last_student_id":  "Unknown",
+                                                      "recognition_score":  0.17675569653511047
+                                                  }
+                                              ],
+                             "candidate_ious":  [
+                                                    {
+                                                        "face_track_id":  2,
+                                                        "detection_index":  0,
+                                                        "iou":  0.0,
+                                                        "threshold_passed":  false,
+                                                        "considered_by_tracker":  false,
+                                                        "selected":  false
+                                                    },
+                                                    {
+                                                        "face_track_id":  3,
+                                                        "detection_index":  0,
+                                                        "iou":  0.39105219552609777,
+                                                        "threshold_passed":  true,
+                                                        "considered_by_tracker":  true,
+                                                        "selected":  true
+                                                    },
+                                                    {
+                                                        "face_track_id":  4,
+                                                        "detection_index":  0,
+                                                        "iou":  0.0,
+                                                        "threshold_passed":  false,
+                                                        "considered_by_tracker":  true,
+                                                        "selected":  false
+                                                    }
+                                                ],
+                             "decisions":  [
+                                               {
+                                                   "face_track_id":  2,
+                                                   "action":  "expired",
+                                                   "reason":  "age_exceeds_max_age"
+                                               },
+                                               {
+                                                   "face_track_id":  4,
+                                                   "action":  "unmatched_retained",
+                                                   "reason":  "no_eligible_iou"
+                                               },
+                                               {
+                                                   "face_track_id":  3,
+                                                   "action":  "matched",
+                                                   "reason":  "selected_by_tracker"
+                                               }
+                                           ],
+                             "mapping":  [
+                                             {
+                                                 "face_track_id":  3,
+                                                 "detection_indices":  [
+                                                                           0
+                                                                       ],
+                                                 "selection_ambiguous":  false,
+                                                 "associations":  [
+                                                                      {
+                                                                          "person_ref":  "person_0",
+                                                                          "person_track_id":  "P1",
+                                                                          "association_status":  "matched",
+                                                                          "student_id":  "SV001"
+                                                                      }
+                                                                  ]
+                                             }
+                                         ],
+                             "details_truncated":  false
+                         }
+    },
+    {
+        "frame_id":  7,
+        "face_tracker":  {
+                             "schema":  "face_tracker_diagnostic_v1",
+                             "frame_id":  7,
+                             "captured_at":  10514.0356554,
+                             "face_tracker_updated_at":  10516.3704314,
+                             "face_update_gap":  2.3511336000010488,
+                             "person_tracker_updated_at":  10516.3709512,
+                             "face_to_person_seconds":  0.0005197999998927116,
+                             "processing":  {
+                                                "face":  0.32197939999969094,
+                                                "hybrid":  1.9675531000011688
+                                            },
+                             "parameters":  {
+                                                "iou_threshold":  0.3,
+                                                "max_age":  4.0
+                                            },
+                             "next_id_before":  5,
+                             "next_id_after":  5,
+                             "face_detection_count":  1,
+                             "track_count_before":  2,
+                             "track_count_after":  1,
+                             "detections":  [
+                                                {
+                                                    "detection_index":  0,
+                                                    "face_bbox":  [
+                                                                      293,
+                                                                      162,
+                                                                      377,
+                                                                      274
+                                                                  ],
+                                                    "current_student_id":  "SV001",
+                                                    "recognition_score":  0.6870372891426086
+                                                }
+                                            ],
+                             "tracks_before":  [
+                                                   {
+                                                       "face_track_id":  3,
+                                                       "face_bbox":  [
+                                                                         283,
+                                                                         163,
+                                                                         365,
+                                                                         270
+                                                                     ],
+                                                       "last_seen":  10514.0192978,
+                                                       "age_seconds":  2.3511336000010488,
+                                                       "stable_label":  "SV001",
+                                                       "updated_in_frame":  false,
+                                                       "last_student_id":  "SV001",
+                                                       "recognition_score":  0.6497241854667664
+                                                   },
+                                                   {
+                                                       "face_track_id":  4,
+                                                       "face_bbox":  [
+                                                                         141,
+                                                                         276,
+                                                                         175,
+                                                                         337
+                                                                     ],
+                                                       "last_seen":  10511.401179,
+                                                       "age_seconds":  4.969252400000187,
+                                                       "stable_label":  "Unknown",
+                                                       "updated_in_frame":  false,
+                                                       "last_student_id":  "Unknown",
+                                                       "recognition_score":  0.17675569653511047
+                                                   }
+                                               ],
+                             "tracks_after":  [
+                                                  {
+                                                      "face_track_id":  3,
+                                                      "face_bbox":  [
+                                                                        293,
+                                                                        162,
+                                                                        377,
+                                                                        274
+                                                                    ],
+                                                      "last_seen":  10516.3704314,
+                                                      "age_seconds":  0.0,
+                                                      "stable_label":  "SV001",
+                                                      "updated_in_frame":  true,
+                                                      "last_student_id":  "SV001",
+                                                      "recognition_score":  0.6870372891426086
+                                                  }
+                                              ],
+                             "candidate_ious":  [
+                                                    {
+                                                        "face_track_id":  3,
+                                                        "detection_index":  0,
+                                                        "iou":  0.7352548196220653,
+                                                        "threshold_passed":  true,
+                                                        "considered_by_tracker":  true,
+                                                        "selected":  true
+                                                    },
+                                                    {
+                                                        "face_track_id":  4,
+                                                        "detection_index":  0,
+                                                        "iou":  0.0,
+                                                        "threshold_passed":  false,
+                                                        "considered_by_tracker":  false,
+                                                        "selected":  false
+                                                    }
+                                                ],
+                             "decisions":  [
+                                               {
+                                                   "face_track_id":  4,
+                                                   "action":  "expired",
+                                                   "reason":  "age_exceeds_max_age"
+                                               },
+                                               {
+                                                   "face_track_id":  3,
+                                                   "action":  "matched",
+                                                   "reason":  "selected_by_tracker"
+                                               }
+                                           ],
+                             "mapping":  [
+                                             {
+                                                 "face_track_id":  3,
+                                                 "detection_indices":  [
+                                                                           0
+                                                                       ],
+                                                 "selection_ambiguous":  false,
+                                                 "associations":  [
+                                                                      {
+                                                                          "person_ref":  "person_0",
+                                                                          "person_track_id":  "P1",
+                                                                          "association_status":  "matched",
+                                                                          "student_id":  "SV001"
+                                                                      }
+                                                                  ]
+                                             }
+                                         ],
+                             "details_truncated":  false
+                         }
+    },
+    {
+        "frame_id":  8,
+        "face_tracker":  {
+                             "schema":  "face_tracker_diagnostic_v1",
+                             "frame_id":  8,
+                             "captured_at":  10516.3627821,
+                             "face_tracker_updated_at":  10518.7894727,
+                             "face_update_gap":  2.4190412999996624,
+                             "person_tracker_updated_at":  10518.7897039,
+                             "face_to_person_seconds":  0.00023119999968912452,
+                             "processing":  {
+                                                "face":  0.33483999999953085,
+                                                "hybrid":  2.0356112999998004
+                                            },
+                             "parameters":  {
+                                                "iou_threshold":  0.3,
+                                                "max_age":  4.0
+                                            },
+                             "next_id_before":  5,
+                             "next_id_after":  5,
+                             "face_detection_count":  1,
+                             "track_count_before":  1,
+                             "track_count_after":  1,
+                             "detections":  [
+                                                {
+                                                    "detection_index":  0,
+                                                    "face_bbox":  [
+                                                                      295,
+                                                                      160,
+                                                                      378,
+                                                                      270
+                                                                  ],
+                                                    "current_student_id":  "SV001",
+                                                    "recognition_score":  0.6792187690734863
+                                                }
+                                            ],
+                             "tracks_before":  [
+                                                   {
+                                                       "face_track_id":  3,
+                                                       "face_bbox":  [
+                                                                         293,
+                                                                         162,
+                                                                         377,
+                                                                         274
+                                                                     ],
+                                                       "last_seen":  10516.3704314,
+                                                       "age_seconds":  2.4190412999996624,
+                                                       "stable_label":  "SV001",
+                                                       "updated_in_frame":  false,
+                                                       "last_student_id":  "SV001",
+                                                       "recognition_score":  0.6870372891426086
+                                                   }
+                                               ],
+                             "tracks_after":  [
+                                                  {
+                                                      "face_track_id":  3,
+                                                      "face_bbox":  [
+                                                                        295,
+                                                                        160,
+                                                                        378,
+                                                                        270
+                                                                    ],
+                                                      "last_seen":  10518.7894727,
+                                                      "age_seconds":  0.0,
+                                                      "stable_label":  "SV001",
+                                                      "updated_in_frame":  true,
+                                                      "last_student_id":  "SV001",
+                                                      "recognition_score":  0.6792187690734863
+                                                  }
+                                              ],
+                             "candidate_ious":  [
+                                                    {
+                                                        "face_track_id":  3,
+                                                        "detection_index":  0,
+                                                        "iou":  0.9146870481305516,
+                                                        "threshold_passed":  true,
+                                                        "considered_by_tracker":  true,
+                                                        "selected":  true
+                                                    }
+                                                ],
+                             "decisions":  [
+                                               {
+                                                   "face_track_id":  3,
+                                                   "action":  "matched",
+                                                   "reason":  "selected_by_tracker"
+                                               }
+                                           ],
+                             "mapping":  [
+                                             {
+                                                 "face_track_id":  3,
+                                                 "detection_indices":  [
+                                                                           0
+                                                                       ],
+                                                 "selection_ambiguous":  false,
+                                                 "associations":  [
+                                                                      {
+                                                                          "person_ref":  "person_0",
+                                                                          "person_track_id":  "P1",
+                                                                          "association_status":  "matched",
+                                                                          "student_id":  "SV001"
+                                                                      }
+                                                                  ]
+                                             }
+                                         ],
+                             "details_truncated":  false
+                         }
+    },
+    {
+        "frame_id":  9,
+        "face_tracker":  {
+                             "schema":  "face_tracker_diagnostic_v1",
+                             "frame_id":  9,
+                             "captured_at":  10518.8111166,
+                             "face_tracker_updated_at":  10520.4771293,
+                             "face_update_gap":  1.6876565999991726,
+                             "person_tracker_updated_at":  10520.4773021,
+                             "face_to_person_seconds":  0.00017280000065511558,
+                             "processing":  {
+                                                "face":  0.10927380000066478,
+                                                "hybrid":  1.5209064000009676
+                                            },
+                             "parameters":  {
+                                                "iou_threshold":  0.3,
+                                                "max_age":  4.0
+                                            },
+                             "next_id_before":  5,
+                             "next_id_after":  5,
+                             "face_detection_count":  0,
+                             "track_count_before":  1,
+                             "track_count_after":  1,
+                             "detections":  [
+
+                                            ],
+                             "tracks_before":  [
+                                                   {
+                                                       "face_track_id":  3,
+                                                       "face_bbox":  [
+                                                                         295,
+                                                                         160,
+                                                                         378,
+                                                                         270
+                                                                     ],
+                                                       "last_seen":  10518.7894727,
+                                                       "age_seconds":  1.6876565999991726,
+                                                       "stable_label":  "SV001",
+                                                       "updated_in_frame":  false,
+                                                       "last_student_id":  "SV001",
+                                                       "recognition_score":  0.6792187690734863
+                                                   }
+                                               ],
+                             "tracks_after":  [
+                                                  {
+                                                      "face_track_id":  3,
+                                                      "face_bbox":  [
+                                                                        295,
+                                                                        160,
+                                                                        378,
+                                                                        270
+                                                                    ],
+                                                      "last_seen":  10518.7894727,
+                                                      "age_seconds":  1.6876565999991726,
+                                                      "stable_label":  "SV001",
+                                                      "updated_in_frame":  false,
+                                                      "last_student_id":  "SV001",
+                                                      "recognition_score":  0.6792187690734863
+                                                  }
+                                              ],
+                             "candidate_ious":  [
+
+                                                ],
+                             "decisions":  [
+                                               {
+                                                   "face_track_id":  3,
+                                                   "action":  "unmatched_retained",
+                                                   "reason":  "no_eligible_iou"
+                                               }
+                                           ],
+                             "mapping":  [
+
+                                         ],
+                             "details_truncated":  false
+                         }
+    },
+    {
+        "frame_id":  10,
+        "face_tracker":  {
+                             "schema":  "face_tracker_diagnostic_v1",
+                             "frame_id":  10,
+                             "captured_at":  10520.4746833,
+                             "face_tracker_updated_at":  10522.8239359,
+                             "face_update_gap":  2.346806600000491,
+                             "person_tracker_updated_at":  10522.8241171,
+                             "face_to_person_seconds":  0.00018120000095223077,
+                             "processing":  {
+                                                "face":  0.29308859999946435,
+                                                "hybrid":  1.9884468000000197
+                                            },
+                             "parameters":  {
+                                                "iou_threshold":  0.3,
+                                                "max_age":  4.0
+                                            },
+                             "next_id_before":  5,
+                             "next_id_after":  6,
+                             "face_detection_count":  1,
+                             "track_count_before":  1,
+                             "track_count_after":  1,
+                             "detections":  [
+                                                {
+                                                    "detection_index":  0,
+                                                    "face_bbox":  [
+                                                                      280,
+                                                                      96,
+                                                                      371,
+                                                                      220
+                                                                  ],
+                                                    "current_student_id":  "SV001",
+                                                    "recognition_score":  0.6338579654693604
+                                                }
+                                            ],
+                             "tracks_before":  [
+                                                   {
+                                                       "face_track_id":  3,
+                                                       "face_bbox":  [
+                                                                         295,
+                                                                         160,
+                                                                         378,
+                                                                         270
+                                                                     ],
+                                                       "last_seen":  10518.7894727,
+                                                       "age_seconds":  4.034463199999664,
+                                                       "stable_label":  "SV001",
+                                                       "updated_in_frame":  false,
+                                                       "last_student_id":  "SV001",
+                                                       "recognition_score":  0.6792187690734863
+                                                   }
+                                               ],
+                             "tracks_after":  [
+                                                  {
+                                                      "face_track_id":  5,
+                                                      "face_bbox":  [
+                                                                        280,
+                                                                        96,
+                                                                        371,
+                                                                        220
+                                                                    ],
+                                                      "last_seen":  10522.8239359,
+                                                      "age_seconds":  0.0,
+                                                      "stable_label":  "Unknown",
+                                                      "updated_in_frame":  true,
+                                                      "last_student_id":  "SV001",
+                                                      "recognition_score":  0.6338579654693604
+                                                  }
+                                              ],
+                             "candidate_ious":  [
+                                                    {
+                                                        "face_track_id":  3,
+                                                        "detection_index":  0,
+                                                        "iou":  0.2876245742399394,
+                                                        "threshold_passed":  false,
+                                                        "considered_by_tracker":  false,
+                                                        "selected":  false
+                                                    }
+                                                ],
+                             "decisions":  [
+                                               {
+                                                   "face_track_id":  3,
+                                                   "action":  "expired",
+                                                   "reason":  "age_exceeds_max_age"
+                                               },
+                                               {
+                                                   "face_track_id":  5,
+                                                   "action":  "new",
+                                                   "reason":  "no_eligible_live_track"
+                                               }
+                                           ],
+                             "mapping":  [
+                                             {
+                                                 "face_track_id":  5,
+                                                 "detection_indices":  [
+                                                                           0
+                                                                       ],
+                                                 "selection_ambiguous":  false,
+                                                 "associations":  [
+                                                                      {
+                                                                          "person_ref":  "person_0",
+                                                                          "person_track_id":  "P1",
+                                                                          "association_status":  "matched",
+                                                                          "student_id":  "SV001"
+                                                                      }
+                                                                  ]
+                                             }
+                                         ],
+                             "details_truncated":  false
+                         }
+    }
+]
