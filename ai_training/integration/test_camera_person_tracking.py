@@ -51,7 +51,7 @@ class TestCameraPersonTracking(unittest.TestCase):
             inferred_images[kind][frame_id] = live.cv2.imread(str(image_path))
             people, faces = copy.deepcopy(frames[index])
             if kind == "face":
-                clock.now = updated_at[index] - gap / 2
+                clock.now = max(clock.now, updated_at[index] - gap / 2)
                 return {"face_count": len(faces), "faces": faces}
             clock.now = updated_at[index]
             return {"person_count": len(people), "people": people}
@@ -298,6 +298,7 @@ class TestCameraPersonTracking(unittest.TestCase):
               patch.object(live.cv2, "waitKey", side_effect=[-1, -1, ord("q")]),
               patch.object(live.cv2, "destroyAllWindows"),
               patch.object(live, "render_snapshot", wraps=render_snapshot, create=True) as render,
+              patch.object(live.Path, "is_file", return_value=True),
               redirect_stdout(io.StringIO())):
             live.main()
         render.assert_not_called()

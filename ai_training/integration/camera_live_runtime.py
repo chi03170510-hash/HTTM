@@ -1,5 +1,6 @@
 """Camera Live lifecycle only; no inference, tracking or behavior decisions."""
 
+import json
 import os
 import queue
 import subprocess
@@ -102,8 +103,23 @@ class LiveWorker(Worker):
         # start() can return before this target runs; process_frame may already
         # have installed its wait proxy. The producer always uses the real queue.
         responses = getattr(self, "_response_queue", self.responses)
+        log_lines = 0
         try:
             for line in self.process.stdout:
+                # Imports/native libraries may log before main redirects stdout.
+                # Only protocol-shaped JSON belongs in the bounded reply queue.
+                try:
+                    payload = json.loads(line)
+                except (ValueError, TypeError):
+                    payload = None
+                if not isinstance(payload, dict) or "frame_id" not in payload:
+                    log_lines += 1
+                    if log_lines > 1000:
+                        self._ipc_failure = "Worker stdout log flood exceeded protocol limit"
+                        break
+                    print(f"[WORKER LOG] {line.rstrip()[:2000]}", file=sys.stderr, flush=True)
+                    continue
+                log_lines = 0
                 if responses.qsize() >= 2:
                     self._ipc_failure = "Worker response backlog exceeded protocol limit"
                     break

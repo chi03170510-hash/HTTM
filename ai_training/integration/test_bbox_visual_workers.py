@@ -47,7 +47,7 @@ class TestVisualWorkerExports(unittest.TestCase):
         self.assertFalse(metadata.sidecar_path(self.f.path, "hybrid").exists())
         actual = self.run_hybrid(True)
         self.assertEqual(actual, baseline)
-        self.assertEqual(set(actual), {"frame_id", "image", "mode", "person_count", "people"})
+        self.assertEqual(set(actual), {"frame_id", "image", "mode", "person_count", "people", "inference_runtime"})
         packet = json.loads(metadata.sidecar_path(self.f.path, "hybrid").read_bytes())
         self.assertEqual(packet["phones"][0]["confidence"], .27)
         self.assertEqual(packet["candidates"][1]["confidence"], .81)
@@ -83,6 +83,7 @@ class TestVisualWorkerExports(unittest.TestCase):
         face = SimpleNamespace(bbox=[30, 20, 70, 60], embedding="not exported")
         model = Mock(); model.get.return_value = [face]
         module.load_face_model.return_value = model
+        module.load_live_face_model = lambda loader: loader()
         module.recognize.return_value = ("SV001", .72)
         output = io.StringIO()
         request = json.dumps({"frame_id": 7, "image": str(self.f.path)}) + "\n"
@@ -100,7 +101,7 @@ class TestVisualWorkerExports(unittest.TestCase):
         packet = json.loads(metadata.sidecar_path(self.f.path, "face").read_bytes())
         self.assertEqual(packet["faces"][0]["score"], .72)
         self.assertNotIn("embedding", repr(packet))
-        self.assertEqual(set(actual), {"frame_id", "image", "face_count", "faces"})
+        self.assertEqual(set(actual), {"frame_id", "image", "face_count", "faces", "inference_runtime"})
 
     def test_face_write_failure_keeps_recognition_output(self):
         baseline = self.run_face(False)

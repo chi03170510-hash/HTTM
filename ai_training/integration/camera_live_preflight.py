@@ -23,7 +23,7 @@ SCHEMA = "httm_camera_live_preflight_v1"
 ROOT = Path(__file__).resolve().parents[2]
 FLAGS = ("HTTM_PERSON_SNAPSHOT_OVERLAY", "HTTM_IDENTITY_SHADOW", "HTTM_PERSON_DEBUG",
          "HTTM_FACE_DEBUG", "HTTM_PERSON_DEBUG_SNAPSHOTS")
-KNOWN_ENV = set(FLAGS) | {"HTTM_BEHAVIOR_CHECKPOINT", "HTTM_CAMERA_MAX_OBSERVATIONS",
+KNOWN_ENV = set(FLAGS) | {"HTTM_BEHAVIOR_CHECKPOINT", "HTTM_CAMERA_MAX_OBSERVATIONS", "HTTM_HYBRID_DEVICE", "HTTM_FACE_DEVICE",
     "HTTM_FACE_TRACKER_TRIAL_MAX_AGE", "HTTM_PERSON_TRIAL_MIN_CONF", "HTTM_IDENTITY_SHADOW_DIR",
     "HTTM_PERSON_DEBUG_DIR", "HTTM_PERSON_DEBUG_MAX_FRAMES", "HTTM_PERSON_DEBUG_MAX_BYTES"}
 PACKAGES = {"face": {"numpy": ("numpy",), "cv2": ("opencv-python", "opencv-contrib-python", "opencv-python-headless", "opencv-contrib-python-headless"),
@@ -135,7 +135,14 @@ def run_preflight(root=ROOT, *, environment=None, current_executable=None, probe
         camera = assignments(source / "camera_coordinator.py")["CAMERA_INDEX"]
         if type(camera) is not int or camera < 0:
             raise ValueError("camera index is not a nonnegative integer")
-        effective.update(camera_index=camera, camera_backends=["DSHOW", "MSMF"], device="cpu")
+        hybrid_device = env.get("HTTM_HYBRID_DEVICE", "auto")
+        if hybrid_device not in ("auto", "cpu", "0"):
+            raise ValueError("HTTM_HYBRID_DEVICE must be auto, cpu or 0")
+        face_device = env.get("HTTM_FACE_DEVICE", "auto")
+        if face_device not in ("auto", "cpu", "0"):
+            raise ValueError("HTTM_FACE_DEVICE must be auto, cpu or 0")
+        effective.update(camera_index=camera, camera_backends=["DSHOW", "MSMF"],
+                         device=hybrid_device, face_device=face_device, device_runtime_verified=False)
         add("camera.configuration", "PASS", f"Current source index={camera}; Live tries DSHOW then MSMF; hardware NOT TESTED")
         live = assignments(source / "camera_coordinator_live.py")
         if live.get("MAX_AI_FRAMES", "missing") is not None:

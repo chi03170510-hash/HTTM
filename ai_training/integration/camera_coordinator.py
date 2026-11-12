@@ -15,7 +15,7 @@ ROOT = INTEGRATION.parents[1]
 sys.path.insert(0, str(INTEGRATION))
 from person_face_association_v4 import associate_v4
 
-CAMERA_INDEX = 0
+CAMERA_INDEX = 1
 MAX_FRAMES = 10
 WORKER_TIMEOUT = 90
 

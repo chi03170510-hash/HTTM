@@ -7,6 +7,7 @@ from ultralytics import YOLO
 from person_tracker_diagnostics import DiagnosticConfig, write_detection_sidecar
 from person_confidence_trial import filter_person_outputs, person_trial_min_conf_from_environment
 from bbox_visual_metadata import enabled as visual_enabled, write_source
+from inference_device import select_hybrid_device, configure_hybrid_threads, inference_runtime
 
 AI = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(AI))
@@ -70,6 +71,8 @@ class HybridV7Stream:
                 hand_model_path=AI / "models/disabled_by_v6.task",
                 device=device,
             )
+
+            configure_hybrid_threads(device)
 
             face_path = AI / "models/face_landmarker.task"
             available, message = (
@@ -189,6 +192,7 @@ class HybridV7Stream:
             "frame_id": frame_id,
             "image": str(image_path.resolve()),
             "mode": "IMAGE_ONLY",
+            "inference_runtime": inference_runtime((self.model, self.objects.model)),
             "person_count": len(people),
             "people": people,
         }
@@ -212,7 +216,7 @@ def main():
     try:
         print("Loading Hybrid V7...", file=sys.stderr)
 
-        worker = HybridV7Stream(device="cpu")
+        worker = HybridV7Stream(device=select_hybrid_device())
 
         print(
             "Hybrid V7 model loaded once.",

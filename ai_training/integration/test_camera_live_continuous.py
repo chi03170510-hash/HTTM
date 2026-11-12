@@ -100,6 +100,20 @@ class TestContinuousAILoop(unittest.TestCase):
         self.assertTrue(all(not path.exists() for w in workers for _, path, _ in w.requests))
         return messages, arguments, workers, log.getvalue()
 
+    def test_workers_overlap_on_same_frame_before_any_result_is_published(self):
+        barrier = threading.Barrier(2)
+        original = pipeline._ReplayWorker.process_frame
+
+        def concurrent(worker, path, fid):
+            barrier.wait(timeout=3.)  # Sequential requests would deadlock/fail here.
+            return original(worker, path, fid)
+
+        with patch.object(pipeline._ReplayWorker, "process_frame", concurrent):
+            messages, arguments, workers, _ = self.run_stream(1, limit=1)
+        self.assertEqual(len(arguments), 1)
+        self.assertEqual(workers[0].requests[0][:2], workers[1].requests[0][:2])
+        self.assertEqual(len([m for m in messages if "frame_id" in m]), 1)
+
     def test_default_is_continuous_and_processes_beyond_twenty_observations(self):
         self.assertIsNone(live.MAX_AI_FRAMES)
         self.assertIsNone(runtime.observation_limit_from_environment())
@@ -129,14 +143,14 @@ class TestContinuousAILoop(unittest.TestCase):
                 messages, args, workers, _ = self.run_stream(20, failure=failure)
                 self.assertEqual(messages[0], {"error": str(failure)})
                 self.assertFalse(args)
-                self.assertFalse(workers[1].requests)
+                self.assertLessEqual(len(workers[1].requests), 1)
 
-    def test_q_between_worker_requests_does_not_start_hybrid(self):
+    def test_q_during_parallel_requests_discards_partial_observation(self):
         messages, args, workers, _ = self.run_stream(20, stop_after_face=True)
         self.assertEqual(messages, [{"finished": True}])
         self.assertFalse(args)
         self.assertEqual(len(workers[0].requests), 1)
-        self.assertFalse(workers[1].requests)
+        self.assertLessEqual(len(workers[1].requests), 1)
 
     def test_cleanup_exception_still_closes_second_worker_and_emits_finished(self):
         messages, _, workers, _ = self.run_stream(1, limit=1, close_failure=True)

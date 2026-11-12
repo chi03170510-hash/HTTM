@@ -120,7 +120,7 @@ class TestCameraLiveLayout(unittest.TestCase):
         result = ui_result(count=3)
         cap = Mock()
         cap.isOpened.return_value = True
-        cap.read.side_effect = [(True, np.full((480, 640, 3), 100, dtype=np.uint8)) for _ in range(3)]
+        cap.read.side_effect = [(True, np.full((480, 640, 3), 100, dtype=np.uint8)) for _ in range(4)]
         stops = []
 
         class FakeThread:
@@ -138,14 +138,17 @@ class TestCameraLiveLayout(unittest.TestCase):
               patch.object(live.threading, "Thread", FakeThread),
               patch.object(live.cv2, "namedWindow"), patch.object(live.cv2, "resizeWindow"),
               patch.object(live.cv2, "imshow") as show,
-              patch.object(live.cv2, "waitKey", side_effect=[ord("n"), ord("p"), ord("q")]),
+              patch.object(live.cv2, "waitKey", side_effect=[ord("i"), ord("n"), ord("p"), ord("q")]),
               patch.object(live.cv2, "destroyAllWindows"),
+              patch.object(live.Path, "is_file", return_value=True),
+              patch.object(live, "draw_live_bboxes", wraps=live.draw_live_bboxes) as boxes,
               patch.object(live, "draw_ai_panel", wraps=live.draw_ai_panel) as draw,
               patch.object(live, "render_snapshot", side_effect=AssertionError("snapshot hidden"), create=True),
               redirect_stdout(io.StringIO())):
             live.main()
         self.assertEqual([call.kwargs["page"] for call in draw.call_args_list], [0, 1, 0])
-        self.assertEqual(show.call_count, 3)
+        self.assertEqual(show.call_count, 4)
+        boxes.assert_called_once()
         self.assertTrue(stops[0].is_set())
         cap.release.assert_called_once_with()
 

@@ -85,6 +85,15 @@ class TestCameraPreflight(unittest.TestCase):
         self.assertIsNone(report["effective"]["T_hold"])
         self.assertTrue(all(len(m["sha256"]) == 64 and m["bytes"] > 0 for m in report["models"]))
 
+    def test_device_selection_records_requested_setting_without_runtime_probe(self):
+        for device in ("auto", "cpu", "0"):
+            with self.subTest(device=device):
+                report = self.run_check(env={"HTTM_HYBRID_DEVICE": device})
+                self.assertEqual(report["status"], "PASS", report["checks"])
+                self.assertEqual(report["effective"]["device"], device)
+                self.assertEqual(report["effective"]["face_device"], "auto")
+                self.assertFalse(report["effective"]["device_runtime_verified"])
+
     def test_missing_selected_checkpoint_is_fail(self):
         (self.root / "ai_training/models/best_behavior_v1_4.pt").unlink()
         self.assertEqual(self.checks(self.run_check(), "model.behavior_selected")[0]["status"], "FAIL")

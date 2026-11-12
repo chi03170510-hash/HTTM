@@ -224,7 +224,7 @@ class PipelineHarness:
               patch.object(live.cv2, "waitKey", side_effect=lambda delay: events[state["tick"]][2]),
               patch.object(live.time, "perf_counter", clock),
               patch.object(live, "draw_ai_panel", side_effect=record_panel)):
-            live.main()
+            live.main(show_diagnostics=True)
         capture.release.assert_called_once_with()
         return samples
 

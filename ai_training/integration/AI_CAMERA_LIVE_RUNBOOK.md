@@ -10,7 +10,7 @@ bên dưới dành cho người dùng chạy khi đã có thiết bị; không c
 | Vai trò | Interpreter/file thực tế |
 |---|---|
 | Coordinator + GUI + Face worker | `.venv\Scripts\python.exe` |
-| Hybrid worker (CPU) | `.venv-hybrid\Scripts\python.exe` — coordinator tự khởi chạy |
+| Hybrid worker (YOLO: CUDA tự chọn / CPU fallback) | `.venv-hybrid\Scripts\python.exe` — coordinator tự khởi chạy |
 | Entrypoint hiện hành | `ai_training\integration\camera_coordinator_live.py` |
 | Model selector | `ai_training\src\behavior_checkpoint.py` |
 | Enrollment | `data\face_enrollment\SV*\embeddings.npz` |
@@ -130,6 +130,96 @@ Ghi nhận mọi cleanup error; không coi đóng cửa sổ là bằng chứng 
 
 ## 5. Overlay và Shadow diagnostic
 
+### Hybrid YOLO GPU (Camera Live)
+
+Hybrid stream worker mặc định chọn `HTTM_HYBRID_DEVICE=auto`: kiểm tra CUDA
+availability và thực thi tensor kernel trước khi chọn GPU `0`; không dùng được
+thì ghi lý do và về CPU. `HTTM_HYBRID_DEVICE=cpu` ép CPU; `0` yêu cầu GPU và
+báo lỗi rõ nếu smoke test CUDA thất bại. Log `[HYBRID DEVICE]` cho biết lựa chọn.
+Đây là chọn thiết bị cho YOLO trong Hybrid; Face có selector riêng bên dưới,
+MediaPipe vẫn CPU. Lỗi trong inference sau khi đã chọn thiết bị vẫn được báo,
+không tự retry cùng frame hay giả nhận GPU thành công.
+
+Cấu hình cài cho Quadro T1000 4 GiB: PyTorch `2.7.1+cu126`, torchvision
+`0.22.1+cu126` từ index chính thức PyTorch CUDA 12.6. Cần kiểm chứng CUDA kernel,
+YOLO và worker thật trên máy; có driver/`cuda.is_available()` chưa đủ. Không
+đồng nhất target <=8 FPS với throughput đo được; webcam live và AI độc lập.
+
+Header live hiển thị `YOLO: GPU / CUDA - <tên GPU> (FP32)` hoặc `YOLO: CPU`,
+lấy từ parameters của active prediction backend, không suy ra từ env yêu cầu.
+Trước kết quả đầu tiên hiện `checking actual backend`; kết quả hết hạn đánh dấu
+`[last result]`. Face hiển thị riêng `Face: GPU / CUDA`, `CPU` hoặc `checking...`,
+lấy từ providers thực của cả hai ONNX sessions; `MediaPipe: CPU` luôn ghi riêng.
+CUDA EP vẫn có thể đặt một số operator không hỗ trợ lên CPU; đây không phải
+khẳng định mọi operator hay toàn bộ pipeline đều GPU. Task Manager có thể mặc
+định hiện biểu đồ 3D; chọn CUDA/Compute trên GPU NVIDIA để quan sát compute.
+CPU vẫn xử lý landmarks/ảnh/GUI và phần CPU của ONNX graph.
+
+Face Camera Live dùng `HTTM_FACE_DEVICE=auto` (thử GPU, báo lỗi rồi fallback CPU),
+`cpu` giữ loader cũ, `0` yêu cầu CUDA và báo lỗi nếu không chạy được. Không đổi
+loader enrollment hoặc embeddings. `.venv` dùng `onnxruntime-gpu==1.20.2`
+(CUDA12/cuDNN9), không cài đồng thời distribution CPU; worker tái dùng DLL ở
+`.venv-hybrid/Lib/site-packages/torch/lib` qua đường dẫn tuyệt đối và PATH chỉ
+trong tiến trình Face. Nếu di chuyển/xóa venv Hybrid, cần cấu hình runtime lại.
+Cả detector và recognizer phải có CUDA provider đầu tiên và chạy smoke test.
+Arena GPU giới hạn 768 MiB mỗi session (không phải giới hạn tổng VRAM process);
+workspace/context/YOLO vẫn dùng thêm VRAM. Không thay threshold hoặc det_size.
+Lỗi inference sau khởi tạo không tự retry hoặc che bằng kết quả CPU.
+
+Đo lặp 13 observations ổn định trên cùng ảnh có một người (không thấy mặt):
+Face CPU ~4,82 FPS; Face GPU ~5,08 FPS cho pipeline song song. Đây là phép đo
+cục bộ, không phải benchmark lớp học hoặc bảo đảm FPS. MediaPipe vẫn có thể
+là nút thắt. Phiên webcam trống nhanh hơn không được dùng để khẳng định 8 FPS
+khi có người; detector vẫn có thể sinh false positive bbox.
+
+Camera Live gọi Face và Hybrid song song trên cùng một JPEG bất biến, chờ cả
+hai trước khi association/duration và trước khi ghi frame kế tiếp. Mỗi worker chỉ
+có một request đang chạy; không ghép kết quả khác frame. Khi YOLO dùng CUDA,
+Hybrid giới hạn Torch CPU threads=2, OpenCV threads=1 để giảm tranh chấp CPU.
+Giữ FP32: thử FP16 trên máy này gây bbox NaN nên không đưa vào cấu hình chạy.
+Không giảm resolution, đổi checkpoint/threshold hoặc bỏ lượt evidence.
+
+### Video live có bbox — chế độ mặc định
+
+`camera_coordinator_live.py` mặc định hiển thị một video live có bbox người,
+PID (`P1`, `P2`...) và chỉ các hành vi `suspected`/`detected`. Không hiện SID,
+`Unknown`, `unknown`, `not_detected` hoặc `DELAYED` trong bbox. Không có dấu hiệu
+thì chỉ hiện PID; duration chỉ thêm khi có giá trị, không hiện `--`. Đây chỉ là lọc
+hiển thị, không đổi dữ liệu identity/behavior/duration hoặc bảng diagnostics.
+Màu bbox: đỏ/cam khi có `detected`, vàng khi có `suspected`, xanh khi không có
+hai trạng thái trên. Màu xanh không chứng minh không có hành vi.
+
+- Camera chỉ mở một lần; UI/capture không chờ AI. AI lấy ảnh mới nhất trong
+  mailbox một phần tử, bỏ qua ảnh chưa kịp xử lý thay vì tạo backlog.
+- AI được giới hạn tối đa **8 observations/giây**. Đây không phải cam kết 8 FPS:
+  model/CPU chậm thì thông lượng thấp hơn. Model, threshold, association,
+  tracker identity, duration và cấu hình WARNING không thay đổi.
+- Bbox là tọa độ từ **quan sát AI gần nhất**, không có tracker bù chuyển động
+  giữa các lần suy luận; người chuyển động nhanh vẫn có thể lệch khung.
+- Bbox được giữ tối đa **5 giây sau completion**, đồng thời **capture age không
+  quá 10 giây**; tỷ lệ ảnh nguồn phải khớp video và timestamps phải hợp lệ.
+  Hai giới hạn độc lập giúp kết quả CPU chậm vẫn hiển thị, nhưng không giữ khung
+  vô hạn khi worker ngừng cập nhật. Quá tuổi thì ẩn bbox, ghi
+  `STALE / incompatible frame - BBoxes hidden`.
+- Khi **capture age > 0,6 giây**, header vẫn ghi `DELAYED` (không lặp trong bbox): tọa độ,
+  danh tính và hành vi thuộc ảnh cũ, có thể không khớp người đang đứng tại đó.
+  Completion mới không làm ảnh nguồn cũ trở thành mới. Không xác nhận danh tính
+  từ bbox delayed; AI Snapshot riêng dùng để kiểm tra đúng ảnh AI đã xử lý.
+- `No valid person boxes in latest AI observation` khác với `STALE`: kết quả
+  còn trong giới hạn nhưng không có bbox người hợp lệ để vẽ.
+- Header hiển thị Camera FPS, AI FPS thực tế và Age tính từ lúc lấy ảnh nguồn.
+  FPS là số sự kiện quan sát trong cửa sổ gần nhất, không phải FPS render lặp
+  bbox; chưa đủ hai sự kiện thì hiển thị 0.0. Duration không tăng khi chỉ repaint.
+- `I`: bật/tắt bảng diagnostics lịch sử 70/30 cũ; `N`/`P`: đổi người trong bảng;
+  `Q`: thoát. AI Snapshot tùy chọn bên dưới vẫn là ảnh lịch sử riêng, không phải
+  video live. Không dùng bbox live cũ để xác nhận danh tính/hành vi ở ảnh hiện tại.
+
+Kiểm thử offline (chỉ ảnh giả/mock, cần NumPy và OpenCV; không mở camera/model):
+
+```powershell
+& .\.venv\Scripts\python.exe -m unittest discover -s ai_training/integration -p test_live_bbox_overlay.py -v
+```
+
 ```powershell
 # Person/Face/Behavior BBox trên AI Snapshot historical riêng.
 $env:HTTM_PERSON_SNAPSHOT_OVERLAY = '1'
@@ -217,6 +307,8 @@ và checklist S1–S5/P1–P5/IC1–IC6 hiện có khi cần chi tiết.
 
 | Env | Mặc định / giá trị thực sự hỗ trợ |
 |---|---|
+| `HTTM_HYBRID_DEVICE` | unset → `auto`; `cpu` ép CPU, `0` yêu cầu CUDA; chỉ Hybrid YOLO |
+| `HTTM_FACE_DEVICE` | unset → `auto`; `cpu` ép CPU, `0` yêu cầu CUDA; Face Camera Live |
 | `HTTM_BEHAVIOR_CHECKPOINT` | unset → V1.4; chỉ tên V1.4 hoặc V2 trong selector |
 | `HTTM_CAMERA_MAX_OBSERVATIONS` | unset → continuous; số nguyên dương để giới hạn |
 | `HTTM_FACE_TRACKER_TRIAL_MAX_AGE` | unset → 2.0s; chỉ `'4.0'` opt-in |
@@ -235,7 +327,7 @@ xóa mọi env HTTM của người dùng:
 
 ```powershell
 $aiDemoVariables = @(
-    'HTTM_BEHAVIOR_CHECKPOINT', 'HTTM_CAMERA_MAX_OBSERVATIONS',
+    'HTTM_BEHAVIOR_CHECKPOINT', 'HTTM_CAMERA_MAX_OBSERVATIONS', 'HTTM_HYBRID_DEVICE', 'HTTM_FACE_DEVICE',
     'HTTM_FACE_TRACKER_TRIAL_MAX_AGE', 'HTTM_PERSON_TRIAL_MIN_CONF',
     'HTTM_PERSON_SNAPSHOT_OVERLAY', 'HTTM_IDENTITY_SHADOW', 'HTTM_IDENTITY_SHADOW_DIR',
     'HTTM_PERSON_DEBUG', 'HTTM_FACE_DEBUG', 'HTTM_PERSON_DEBUG_SNAPSHOTS',

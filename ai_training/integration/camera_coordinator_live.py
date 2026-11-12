@@ -5,6 +5,7 @@ import tempfile
 import threading
 import time
 from itertools import count
+from concurrent.futures import ThreadPoolExecutor
 from pathlib import Path
 
 import cv2
@@ -26,6 +27,7 @@ from person_tracker_diagnostics import DiagnosticConfig, PersonTrackerDiagnostic
 from identity_continuity_diagnostics import shadow_from_environment
 from person_snapshot_overlay import overlay_from_environment
 from bbox_visual_metadata import enabled as visual_enabled, attach_to_result
+from live_bbox_overlay import AI_TARGET_FPS, FrameRateMeter, InferencePacer, draw_live_bboxes
 import sys
 
 sys.path.insert(0, str(ROOT / "ai_training" / "recognition"))
@@ -62,6 +64,7 @@ def ai_loop(frame_queue, result_queue, stop_event, max_observations=_FROM_ENVIRO
     face_worker = None
     hybrid_worker = None
     identity_shadow = None
+    inference_pool = None
     person_tracker = PersonTracker(
         iou_threshold=0.3,
         max_age=PERSON_TRACK_MAX_AGE,
@@ -101,6 +104,7 @@ def ai_loop(frame_queue, result_queue, stop_event, max_observations=_FROM_ENVIRO
             INTEGRATION / "hybrid_v7_stream_worker.py",
         )
         hybrid_worker.stop_event = stop_event
+        inference_pool = ThreadPoolExecutor(max_workers=2, thread_name_prefix="live-inference")
 
         with tempfile.TemporaryDirectory(
             prefix="httm_live_"
@@ -109,7 +113,12 @@ def ai_loop(frame_queue, result_queue, stop_event, max_observations=_FROM_ENVIRO
 
             frame_ids = count(1) if max_observations is None else iter(range(1, max_observations + 1))
             completed = 0
+            pacer = InferencePacer(AI_TARGET_FPS)
             while not stop_event.is_set() and (max_observations is None or completed < max_observations):
+                # Pace only this worker. Fetch AFTER waiting so the mailbox
+                # supplies the latest camera frame, not an image held during sleep.
+                if pacer.wait(stop_event, time.perf_counter()):
+                    break
                 try:
                     captured_at, frame = frame_queue.get(
                         timeout=1
@@ -122,6 +131,7 @@ def ai_loop(frame_queue, result_queue, stop_event, max_observations=_FROM_ENVIRO
                 if stop_event.is_set():
                     break
                 # Empty polling consumes no ID and no observation budget.
+                pacer.started(time.perf_counter())
                 frame_id = next(frame_ids)
 
                 if not cv2.imwrite(str(image_path), frame):
@@ -134,20 +144,29 @@ def ai_loop(frame_queue, result_queue, stop_event, max_observations=_FROM_ENVIRO
                 if snapshot_image is None:
                     raise RuntimeError("Cannot decode AI snapshot")
 
-                face_started = time.perf_counter()
-                face_result = face_worker.process_frame(
-                    image_path, frame_id
-                )
-                face_time = time.perf_counter() - face_started
+                # One request per worker; both read the SAME immutable JPEG.
+                # Join both before the next iteration can overwrite that file.
+                def timed_inference(worker):
+                    worker_started = time.perf_counter()
+                    reply = worker.process_frame(image_path, frame_id)
+                    return reply, time.perf_counter() - worker_started
 
+                face_future = inference_pool.submit(timed_inference, face_worker)
+                hybrid_future = inference_pool.submit(timed_inference, hybrid_worker)
+                try:
+                    face_result, face_time = face_future.result()
+                    hybrid_result, hybrid_time = hybrid_future.result()
+                except BaseException:
+                    stop_event.set()
+                    # Drain both calls before temporary files/resources close.
+                    for future in (face_future, hybrid_future):
+                        try:
+                            future.result()
+                        except BaseException:
+                            pass
+                    raise
                 if stop_event.is_set():
                     break
-
-                hybrid_started = time.perf_counter()
-                hybrid_result = hybrid_worker.process_frame(
-                    image_path, frame_id
-                )
-                hybrid_time = time.perf_counter() - hybrid_started
 
                 detections = [
                     (
@@ -256,6 +275,8 @@ def ai_loop(frame_queue, result_queue, stop_event, max_observations=_FROM_ENVIRO
                     "completed_at": time.perf_counter(),
                     "face_count": face_result["face_count"],
                     "person_count": hybrid_result["person_count"],
+                    "inference_runtime": hybrid_result.get("inference_runtime"),
+                    "face_runtime": face_result.get("inference_runtime"),
                     "matches": matches,
                     "tracked_people": tracked_people,
                     "tracked_faces": tracked_faces,
@@ -263,6 +284,7 @@ def ai_loop(frame_queue, result_queue, stop_event, max_observations=_FROM_ENVIRO
                     "behavior_frame": behavior_frame,
                     "warning_frame": warning_frame,
                     "snapshot": snapshot,
+                    "source_size": (frame.shape[1], frame.shape[0]),
                     "face_time": face_time,
                     "hybrid_time": hybrid_time,
                     "elapsed": elapsed,
@@ -301,6 +323,8 @@ def ai_loop(frame_queue, result_queue, stop_event, max_observations=_FROM_ENVIRO
                     getattr(resource, method)()
                 except Exception as exc:
                     cleanup_errors.append(f"{method}: {type(exc).__name__}: {exc}")
+        if inference_pool is not None:
+            inference_pool.shutdown(wait=True, cancel_futures=True)
         if cleanup_errors:
             publish_latest(result_queue, {"error": "AI cleanup failed: " + "; ".join(cleanup_errors)})
         publish_latest(result_queue, {"finished": True})
@@ -415,7 +439,7 @@ def draw_ai_panel(frame, result, page=0, now=None):
                 .65, (230, 230, 230), 1, cv2.LINE_AA)
     return output
 
-def main():
+def main(*, show_diagnostics=False):
     max_observations = observation_limit_from_environment(MAX_AI_FRAMES)
     # Reject invalid trial settings before camera/model/GUI resources are opened.
     face_max_age = face_tracker_max_age_from_environment()
@@ -463,6 +487,7 @@ def main():
 
     latest_result = None
     window_sized = False
+    camera_rate, ai_rate = FrameRateMeter(), FrameRateMeter()
     person_page = 0
     completed = 0
     error = None
@@ -479,6 +504,7 @@ def main():
                 raise RuntimeError("Camera read failed")
 
             captured_at = time.perf_counter()
+            camera_rate.mark(captured_at)
 
             if not stop_event.is_set():
                 if frame_queue.full():
@@ -510,6 +536,7 @@ def main():
                 else:
                     latest_result = result
                     completed = result["frame_id"]
+                    ai_rate.mark(result["completed_at"])
 
                     print(
                         f"Frame {result['frame_id']}: "
@@ -524,22 +551,20 @@ def main():
                         flush=True,
                     )
 
-            frame = draw_ai_panel(frame, latest_result, page=person_page)
+            if show_diagnostics:
+                frame = draw_ai_panel(frame, latest_result, page=person_page)
+            else:
+                display_now = time.perf_counter()
+                frame = draw_live_bboxes(
+                    frame, latest_result, now=display_now,
+                    camera_fps=camera_rate.fps(display_now), ai_fps=ai_rate.fps(display_now),
+                    view_width=VIEW_WIDTH,
+                )
             if not window_sized:
                 window_scale = min(1., 720 / frame.shape[0])
                 cv2.resizeWindow(WINDOW_NAME, round(frame.shape[1] * window_scale),
                                  round(frame.shape[0] * window_scale))
                 window_sized = True
-
-            cv2.putText(
-                frame,
-                f"AI results: {completed}" + (" | continuous" if max_observations is None else f"/{max_observations}"),
-                (LIVE_VIEW_WIDTH - 200, 30),
-                cv2.FONT_HERSHEY_SIMPLEX,
-                0.5,
-                (255, 255, 255),
-                1,
-            )
 
             cv2.imshow(WINDOW_NAME, frame)
 
@@ -556,6 +581,9 @@ def main():
             if key == ord("q"):
                 stop_event.set()
                 break
+            if key == ord("i"):
+                show_diagnostics = not show_diagnostics
+                window_sized = False
             if key == ord("n"):
                 person_page += 1
             elif key == ord("p"):

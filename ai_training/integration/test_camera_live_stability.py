@@ -281,13 +281,40 @@ class TestLiveWorkerResourceFailures(unittest.TestCase):
     def test_stdout_flood_is_bounded_and_rejected_without_silent_dropping(self):
         worker = runtime.LiveWorker.__new__(runtime.LiveWorker)
         worker.responses = queue.Queue(maxsize=3)
-        worker.process = Mock(stdout=io.StringIO("unexpected stdout\n" * 5000))
+        worker.process = Mock(stdout=io.StringIO('{"frame_id":1}\n' * 5000))
         worker._closing, worker._ipc_failure = False, None
         worker._read_output()
         self.assertEqual(worker.responses.qsize(), 3)
         self.assertIn("backlog", worker._ipc_failure)
         with self.assertRaisesRegex(RuntimeError, "backlog"):
             worker.process_frame(Path("fixture.jpg"), 1)
+
+    def test_startup_logs_do_not_fill_reply_queue_or_replace_ai_result(self):
+        process = self.process()
+        process.stdout = io.StringIO(
+            'Loading library...\nGPU initialized\n{"status":"loading"}\n'
+            '{"frame_id":1,"image":"fixture.jpg"}\n')
+        with (patch.object(runtime.subprocess, "Popen", return_value=process),
+              patch.object(runtime.sys, "stderr", new_callable=io.StringIO) as logs):
+            worker = runtime.LiveWorker("fixture_python", "fixture_worker")
+            worker.reader.join(timeout=2)
+            try:
+                self.assertIsNone(worker._ipc_failure)
+                self.assertEqual(worker.responses.qsize(), 2)  # Reply + EOF only.
+                self.assertEqual(worker.process_frame(Path("fixture.jpg"), 1)["frame_id"], 1)
+                self.assertIn("Loading library", logs.getvalue())
+            finally:
+                worker.close()
+
+    def test_non_protocol_log_flood_remains_bounded(self):
+        worker = runtime.LiveWorker.__new__(runtime.LiveWorker)
+        worker.responses = queue.Queue(maxsize=3)
+        worker.process = Mock(stdout=io.StringIO("unexpected stdout\n" * 5000))
+        worker._closing, worker._ipc_failure = False, None
+        with patch.object(runtime.sys, "stderr", new_callable=io.StringIO):
+            worker._read_output()
+        self.assertEqual(worker.responses.qsize(), 1)  # EOF, no logs retained.
+        self.assertIn("log flood", worker._ipc_failure)
 
     def test_reader_starting_after_response_wait_uses_original_bounded_queue(self):
         process = self.process(); process.stdout = io.StringIO('{"frame_id":1,"image":"fixture.jpg"}\n')

@@ -4,6 +4,7 @@ from pathlib import Path
 
 import cv2
 from bbox_visual_metadata import enabled as visual_enabled, write_source
+from face_inference_device import load_live_face_model, face_runtime
 
 AI_DIR = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(AI_DIR / "recognition"))
@@ -24,7 +25,8 @@ def main():
         visualization_enabled = visual_enabled()
         print("Loading Face ID database and model...", file=sys.stderr)
         database = load_database()
-        model = load_face_model()
+        model = load_live_face_model(load_face_model)
+        runtime = face_runtime(model)
         print("Face ID model loaded once.", file=sys.stderr)
 
         for line in sys.stdin:
@@ -72,6 +74,7 @@ def main():
                     "frame_id": frame_id,
                     "image": str(image_path.resolve()),
                     "face_count": len(faces),
+                    "inference_runtime": runtime,
                     "faces": faces,
                 }
 
