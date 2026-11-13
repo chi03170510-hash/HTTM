@@ -605,7 +605,8 @@ class BehaviorDetector:
                 f_cx = 0.5 * (f_box[0] + f_box[2])
                 overlap = _bbox_overlap_ratio(f_box, exp_p_box)
                 in_central_span = (px1 + 0.10 * pw) <= f_cx <= (px2 - 0.10 * pw)
-                if overlap >= 0.35 and in_central_span:
+                not_bottom_border_artifact = float(f_box[3]) < (h - 12.0)
+                if overlap >= 0.35 and in_central_span and not_bottom_border_artifact:
                     boosted = min(0.95, max(float(food["confidence"]) + 0.40, 0.60))
                     best_eating_conf = max(best_eating_conf, boosted)
 
@@ -648,49 +649,64 @@ class BehaviorDetector:
                     "bbox": list(p_box),
                 })
 
-            # --- 3. SLEEPING CUES (class_id = 1) ---
+            # --- 3. SLEEPING CUES (class_id = 1) - Focus on bending over / slumping (ignore eye blinking) ---
             if not has_phone and not has_eating:
                 best_sleeping_conf = 0.0
-                eyes_clearly_awake = False
+                upright_head = False
+                face_hidden = True
 
                 if face_feat is not None:
                     eyes_valid = bool(face_feat.get("eyes_valid"))
-                    ear_left = face_feat.get("ear_left")
-                    ear_right = face_feat.get("ear_right")
                     pose = face_feat.get("head_pose") or {}
                     pose_valid = bool(pose.get("valid"))
                     roll_deg = abs(float(pose.get("roll_deg") or 0.0)) if pose_valid else 0.0
                     pitch_deg = abs(float(pose.get("pitch_deg") or 0.0)) if pose_valid else 0.0
+                    mc = face_feat.get("mouth_center_xy")
+                    mc_rel_y = ((float(mc[1]) - py1) / ph) if (mc is not None and ph > 1.0) else 0.5
 
-                    if eyes_valid and ear_left is not None and ear_right is not None:
-                        mean_ear = 0.5 * (float(ear_left) + float(ear_right))
-                        if mean_ear < 0.155:
-                            ear_conf = min(0.94, max(0.60, 0.60 + (0.155 - mean_ear) * 3.5))
-                            best_sleeping_conf = max(best_sleeping_conf, ear_conf)
-                        elif mean_ear >= 0.180 and roll_deg < 16.0 and pitch_deg < 18.0:
-                            eyes_clearly_awake = True
+                    if eyes_valid or pose_valid:
+                        face_hidden = False
 
-                    if pose_valid and not eyes_clearly_awake and (roll_deg >= 18.0 or pitch_deg >= 18.0):
-                        tilt_score = max(roll_deg - 18.0, pitch_deg - 18.0, 0.0)
-                        pose_conf = min(0.92, 0.58 + tilt_score * 0.015)
-                        best_sleeping_conf = max(best_sleeping_conf, pose_conf)
+                    # Sitting upright (even if blinking/closing eyes) -> never trigger Sleeping
+                    if pose_valid and roll_deg < 19.0 and pitch_deg < 19.0 and mc_rel_y < 0.74:
+                        upright_head = True
+
+                    # Slumped / bent head posture (strong head drop/roll or low head position on desk)
+                    if pose_valid and not upright_head:
+                        if roll_deg >= 20.0 or pitch_deg >= 20.0:
+                            tilt_score = max(roll_deg - 20.0, pitch_deg - 20.0, 0.0)
+                            pose_conf = min(0.94, 0.65 + tilt_score * 0.02)
+                            best_sleeping_conf = max(best_sleeping_conf, pose_conf)
+                        elif (roll_deg >= 15.0 or pitch_deg >= 15.0) and mc_rel_y >= 0.74:
+                            best_sleeping_conf = max(best_sleeping_conf, 0.72)
+
+                # Torso bent-over geometry when upright face is hidden (buried on desk / folded arms)
+                aspect_ratio = pw / ph
+                if (
+                    face_hidden
+                    and p_area >= 0.22 * frame_area
+                    and py1 >= 0.32 * h
+                    and py2 >= 0.88 * h
+                    and aspect_ratio >= 1.38
+                ):
+                    slump_conf = min(0.90, 0.64 + (aspect_ratio - 1.38) * 0.35)
+                    best_sleeping_conf = max(best_sleeping_conf, slump_conf)
 
                 for beh in aux_behaviors:
-                    if beh["class_id"] == 1 and beh["confidence"] >= 0.32 and not eyes_clearly_awake:
+                    if beh["class_id"] == 1 and beh["confidence"] >= 0.22 and not upright_head:
                         if (
                             _bbox_overlap_ratio(beh["bbox"], exp_p_box) >= 0.30
                             or _bbox_iou(beh["bbox"], p_box) >= 0.20
                         ):
-                            boosted = min(0.94, max(float(beh["confidence"]) + 0.25, 0.58))
+                            boosted = min(0.94, max(float(beh["confidence"]) + 0.30, 0.60))
                             best_sleeping_conf = max(best_sleeping_conf, boosted)
 
                 for beh in primary_behaviors:
-                    if beh["class_id"] == 1 and beh["confidence"] >= 0.14 and not eyes_clearly_awake:
+                    if beh["class_id"] == 1 and beh["confidence"] >= 0.12 and not upright_head:
                         overlap = _bbox_overlap_ratio(beh["bbox"], exp_p_box)
                         area_ratio = _bbox_area(beh["bbox"]) / p_area
-                        face_hidden = face_feat is None or not bool(face_feat.get("eyes_valid"))
-                        if (overlap >= 0.30 and area_ratio >= 0.10) or (face_hidden and beh["confidence"] >= 0.14):
-                            boosted = min(0.90, max(float(beh["confidence"]) + 0.35, 0.55))
+                        if (overlap >= 0.30 and area_ratio >= 0.10) or (face_hidden and beh["confidence"] >= 0.12):
+                            boosted = min(0.90, max(float(beh["confidence"]) + 0.40, 0.58))
                             best_sleeping_conf = max(best_sleeping_conf, boosted)
 
                 if best_sleeping_conf > 0.0:
