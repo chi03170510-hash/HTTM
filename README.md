@@ -3,7 +3,7 @@
 Hệ thống giám sát lớp học trực tiếp từ camera sử dụng lõi AI **YOLOv8n** + **Behavior YOLO** (`Using Phone`, `Eating`, `Sleeping`), giữ nguyên giao thức kết nối camera (`DSHOW` -> `MSMF`) và giao diện OpenCV Live của `HTTM`.
 
 ## Tính năng chính
-- **Phát hiện đối tượng & đếm người (`yolov8n.pt`)**: đếm sĩ số (`Occupancy`) và các vật dụng lớp học (`Cell Phone`, `Laptop`, `Book`, `Chair`, `Table`, ...).
+- **Phát hiện đối tượng & đếm người (`yolov8n.pt`)**: đếm sĩ số (`Occupancy`) và các vật dụng lớp học (`Cell Phone`, `Laptop`, `Book`, `Backpack`, ...).
 - **Nhận diện 3 hành vi (`behavior_yolo.pt`)**: `Using Phone`, `Eating`, `Sleeping`.
 - **Tự động chạy GPU CUDA (`CUDA:0`)**: tự động sử dụng GPU NVIDIA nếu có PyTorch CUDA, fallback an toàn sang CPU nếu máy không có GPU.
 - **Giữ nguyên giao thức camera HTTM**: thử `DSHOW` rồi fallback `MSMF`, pipeline bất đồng bộ `frame_queue` / `result_queue`, chế độ xem live + bảng chẩn đoán 70/30.

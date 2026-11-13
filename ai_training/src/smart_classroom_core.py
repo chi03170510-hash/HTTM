@@ -1,7 +1,8 @@
 """Self-contained AI-Smart-Classroom-Monitoring-System core inference module for HTTM.
 
 Ports ObjectDetector (yolov8n.pt with classroom allowlist), BehaviorDetector
-(behavior_yolo.pt filtered to Sleeping, Using Phone, Eating), and UnifiedPipeline.
+(behavior_yolo.pt + webcam behavior & MediaPipe face/object cues filtered to
+Sleeping, Using Phone, Eating), and UnifiedPipeline.
 """
 from __future__ import annotations
 
@@ -22,14 +23,12 @@ HTTM_ROOT = AI_TRAINING_DIR.parent
 OUTER_ROOT = HTTM_ROOT.parent
 
 CONFIDENCE_THRESHOLD = 0.35
-BEHAVIOR_CONFIDENCE_THRESHOLD = 0.25
+BEHAVIOR_CONFIDENCE_THRESHOLD = 0.15
+OBJECT_CUE_CONFIDENCE_THRESHOLD = 0.15
 IMG_SIZE = 640
 
 CLASSROOM_OBJECT_ALLOWLIST = {
     "person": "Person",
-    "chair": "Chair",
-    "dining table": "Table",
-    "table": "Table",
     "laptop": "Laptop",
     "tv": "Monitor",
     "tvmonitor": "Monitor",
@@ -46,10 +45,45 @@ CLASSROOM_OBJECT_ALLOWLIST = {
     "handbag": "Handbag",
 }
 
+FOOD_OBJECT_CLASSES = {
+    "banana",
+    "apple",
+    "sandwich",
+    "orange",
+    "broccoli",
+    "carrot",
+    "hot dog",
+    "pizza",
+    "donut",
+    "cake",
+    "fork",
+    "spoon",
+}
+
+DRINK_OBJECT_CLASSES = {
+    "bottle",
+    "cup",
+    "wine glass",
+}
+
+PHONE_OBJECT_CLASSES = {
+    "cell phone",
+    "phone",
+}
+
 BEHAVIOR_CLASSES = {
     1: "Sleeping",
     2: "Using Phone",
     6: "Eating",
+}
+
+AUX_WEBCAM_BEHAVIOR_MAP = {
+    "sleeping": (1, "Sleeping"),
+    "using_phone": (2, "Using Phone"),
+    "Using Phone": (2, "Using Phone"),
+    "Sleeping": (1, "Sleeping"),
+    "eating": (6, "Eating"),
+    "Eating": (6, "Eating"),
 }
 
 
@@ -98,8 +132,89 @@ def resolve_behavior_model_path() -> Path:
     )
 
 
+def resolve_aux_webcam_behavior_model_path() -> Path | None:
+    candidates = (
+        AI_TRAINING_DIR / "models" / "best_behavior_v2.pt",
+        AI_TRAINING_DIR / "models" / "best_behavior_v3.pt",
+        HTTM_ROOT / "models" / "best_behavior_v2.pt",
+    )
+    for path in candidates:
+        if path.is_file():
+            return path
+    return None
+
+
+def _bbox_area(bbox: list[float] | tuple[float, ...]) -> float:
+    return max(0.0, float(bbox[2]) - float(bbox[0])) * max(0.0, float(bbox[3]) - float(bbox[1]))
+
+
+def _bbox_intersection(box_a: list[float] | tuple[float, ...], box_b: list[float] | tuple[float, ...]) -> float:
+    x1 = max(float(box_a[0]), float(box_b[0]))
+    y1 = max(float(box_a[1]), float(box_b[1]))
+    x2 = min(float(box_a[2]), float(box_b[2]))
+    y2 = min(float(box_a[3]), float(box_b[3]))
+    return max(0.0, x2 - x1) * max(0.0, y2 - y1)
+
+
+def _bbox_iou(box_a: list[float] | tuple[float, ...], box_b: list[float] | tuple[float, ...]) -> float:
+    inter = _bbox_intersection(box_a, box_b)
+    if inter <= 0.0:
+        return 0.0
+    union = _bbox_area(box_a) + _bbox_area(box_b) - inter
+    return inter / union if union > 1e-6 else 0.0
+
+
+def _bbox_overlap_ratio(inner_box: list[float] | tuple[float, ...], outer_box: list[float] | tuple[float, ...]) -> float:
+    inner_area = _bbox_area(inner_box)
+    if inner_area <= 1e-6:
+        return 0.0
+    return _bbox_intersection(inner_box, outer_box) / inner_area
+
+
+def _expand_bbox(
+    bbox: list[float] | tuple[float, ...],
+    frame_shape: tuple[int, ...],
+    scale_x: float = 0.12,
+    scale_y: float = 0.12,
+) -> list[float]:
+    h, w = frame_shape[:2]
+    x1, y1, x2, y2 = [float(v) for v in bbox]
+    bw = x2 - x1
+    bh = y2 - y1
+    return [
+        max(0.0, x1 - bw * scale_x),
+        max(0.0, y1 - bh * scale_y),
+        min(float(w), x2 + bw * scale_x),
+        min(float(h), y2 + bh * scale_y),
+    ]
+
+
+def _deduplicate_behaviors(behaviors: list[dict], iou_thresh: float = 0.45) -> list[dict]:
+    if not behaviors:
+        return []
+    sorted_beh = sorted(behaviors, key=lambda b: float(b.get("confidence", 0.0)), reverse=True)
+    kept: list[dict] = []
+    for cand in sorted_beh:
+        cand_cls = cand["class_id"]
+        cand_box = cand["bbox"]
+        duplicate = False
+        for existing in kept:
+            if existing["class_id"] != cand_cls:
+                continue
+            if (
+                _bbox_iou(cand_box, existing["bbox"]) >= iou_thresh
+                or _bbox_overlap_ratio(cand_box, existing["bbox"]) >= 0.70
+                or _bbox_overlap_ratio(existing["bbox"], cand_box) >= 0.70
+            ):
+                duplicate = True
+                break
+        if not duplicate:
+            kept.append(cand)
+    return kept
+
+
 class ObjectDetector:
-    """Model 1 - Classroom Object Detection (YOLOv8n filtered by allowlist)."""
+    """Model 1 - Classroom Object Detection (YOLOv8n filtered by allowlist + behavior cues)."""
 
     def __init__(
         self,
@@ -109,6 +224,7 @@ class ObjectDetector:
         device: str | None = None,
     ):
         self.conf_thresh = float(conf_thresh)
+        self.cue_conf_thresh = min(float(conf_thresh), OBJECT_CUE_CONFIDENCE_THRESHOLD)
         self.imgsz = int(imgsz)
         self.device = select_default_device(device)
         self.model_path = Path(model_path) if model_path is not None else resolve_object_model_path()
@@ -125,12 +241,18 @@ class ObjectDetector:
         logger.info("Object Detection Model loaded successfully (device=%s).", self.device)
 
     def detect(self, frame: np.ndarray) -> dict:
+        empty_cues = {"persons": [], "phones": [], "foods": [], "drinks": []}
         if self.model is None or frame is None:
-            return {"detections": [], "occupancy": 0, "inference_time_ms": 0.0}
+            return {
+                "detections": [],
+                "occupancy": 0,
+                "inference_time_ms": 0.0,
+                "raw_cues": empty_cues,
+            }
 
         start_time = time.perf_counter()
         predict_kwargs = {
-            "conf": self.conf_thresh,
+            "conf": self.cue_conf_thresh,
             "imgsz": self.imgsz,
             "device": self.device,
             "verbose": False,
@@ -140,6 +262,7 @@ class ObjectDetector:
 
         detections = []
         person_count = 0
+        raw_cues: dict[str, list[dict]] = {"persons": [], "phones": [], "foods": [], "drinks": []}
 
         if results and len(results) > 0:
             result = results[0]
@@ -149,9 +272,33 @@ class ObjectDetector:
                     cls_id = int(box.cls[0].item())
                     raw_cls_name = str(result.names.get(cls_id, str(cls_id))).lower()
                     conf = float(box.conf[0].item())
-                    xyxy = box.xyxy[0].tolist()
+                    xyxy = [round(float(c), 2) for c in box.xyxy[0].tolist()]
+                    item = {
+                        "class_id": cls_id,
+                        "raw_name": raw_cls_name,
+                        "confidence": round(conf, 4),
+                        "bbox": xyxy,
+                    }
+
+                    if raw_cls_name == "person" and conf >= min(self.conf_thresh, 0.25):
+                        raw_cues["persons"].append(item)
+                    elif raw_cls_name in PHONE_OBJECT_CLASSES and conf >= self.cue_conf_thresh:
+                        raw_cues["phones"].append(item)
+                    elif raw_cls_name in FOOD_OBJECT_CLASSES and conf >= self.cue_conf_thresh:
+                        raw_cues["foods"].append(item)
+                    elif raw_cls_name in DRINK_OBJECT_CLASSES and conf >= 0.20:
+                        raw_cues["drinks"].append(item)
 
                     if raw_cls_name not in CLASSROOM_OBJECT_ALLOWLIST:
+                        continue
+
+                    min_display_conf = self.conf_thresh
+                    if raw_cls_name == "person":
+                        min_display_conf = min(self.conf_thresh, 0.25)
+                    elif raw_cls_name in PHONE_OBJECT_CLASSES:
+                        min_display_conf = min(self.conf_thresh, 0.18)
+
+                    if conf < min_display_conf:
                         continue
 
                     display_name = CLASSROOM_OBJECT_ALLOWLIST[raw_cls_name]
@@ -162,13 +309,14 @@ class ObjectDetector:
                         "class_id": cls_id,
                         "class_name": display_name,
                         "confidence": round(conf, 4),
-                        "bbox": [round(float(c), 2) for c in xyxy],
+                        "bbox": xyxy,
                     })
 
         return {
             "detections": detections,
             "occupancy": person_count,
             "inference_time_ms": inference_time_ms,
+            "raw_cues": raw_cues,
         }
 
 
@@ -188,8 +336,11 @@ class BehaviorDetector:
         self.behavior_classes = dict(BEHAVIOR_CLASSES)
         self.model_path = Path(model_path) if model_path is not None else resolve_behavior_model_path()
         self.model = None
+        self.aux_webcam_model = None
+        self.face_extractor = None
         self.is_custom_model = False
         self._load_model()
+        self._load_auxiliary_detectors()
 
     def _load_model(self):
         if not self.model_path.is_file():
@@ -214,22 +365,78 @@ class BehaviorDetector:
         self.is_custom_model = True
         logger.info("Behavior Detection Model loaded successfully (device=%s).", self.device)
 
-    def detect(self, frame: np.ndarray) -> dict:
+    def _load_auxiliary_detectors(self):
+        aux_path = resolve_aux_webcam_behavior_model_path()
+        if aux_path is not None and aux_path.resolve() != self.model_path.resolve():
+            try:
+                self.aux_webcam_model = YOLO(str(aux_path))
+                if self.device != "cpu":
+                    self.aux_webcam_model.to("cuda:0" if self.device == "0" else self.device)
+                logger.info("Loaded auxiliary webcam behavior model: %s", aux_path)
+            except Exception as exc:
+                logger.warning("Could not load auxiliary webcam behavior model %s: %s", aux_path, exc)
+                self.aux_webcam_model = None
+
+        try:
+            try:
+                from src.face_features import FaceFeatureExtractor
+            except ImportError:
+                from face_features import FaceFeatureExtractor  # type: ignore
+
+            usable, reason = FaceFeatureExtractor.availability()
+            if usable:
+                self.face_extractor = FaceFeatureExtractor(min_detection_confidence=0.35)
+                logger.info("Loaded MediaPipe FaceFeatureExtractor (%s).", reason)
+        except Exception as exc:
+            logger.debug("FaceFeatureExtractor unavailable: %s", exc)
+            self.face_extractor = None
+
+    def _extract_person_face_features(self, frame: np.ndarray, person_bbox: list[float]) -> dict | None:
+        if self.face_extractor is None or frame is None or frame.size == 0:
+            return None
+        h, w = frame.shape[:2]
+        frame_area = max(float(h * w), 1.0)
+        p_area = _bbox_area(person_bbox)
+
+        x1 = max(0, int(person_bbox[0]))
+        y1 = max(0, int(person_bbox[1]))
+        x2 = min(w, int(person_bbox[2]))
+        y2 = min(h, int(person_bbox[3]))
+        if x2 - x1 < 45 or y2 - y1 < 45:
+            return None
+
+        try:
+            if p_area >= 0.22 * frame_area:
+                feat_full = self.face_extractor.extract(frame)
+                if feat_full.get("eyes_valid"):
+                    mc = feat_full.get("mouth_center_xy")
+                    if mc is None or (x1 - 30 <= mc[0] <= x2 + 30 and y1 - 30 <= mc[1] <= y2 + 30):
+                        return feat_full
+            crop = frame[y1:y2, x1:x2]
+            feat_crop = self.face_extractor.extract(crop)
+            if feat_crop.get("eyes_valid") and feat_crop.get("mouth_center_xy") is not None:
+                mc = feat_crop["mouth_center_xy"]
+                feat_crop = dict(feat_crop)
+                feat_crop["mouth_center_xy"] = [float(mc[0]) + x1, float(mc[1]) + y1]
+            return feat_crop
+        except Exception:
+            return None
+
+    def detect(self, frame: np.ndarray, object_cues: dict | None = None) -> dict:
         if self.model is None or frame is None:
             return {"behaviors": [], "inference_time_ms": 0.0}
 
         start_time = time.perf_counter()
-        behaviors = []
+        raw_primary_behaviors: list[dict] = []
 
         predict_kwargs = {
-            "conf": self.conf_thresh,
+            "conf": min(self.conf_thresh, 0.14),
             "imgsz": self.imgsz,
             "device": self.device,
             "classes": sorted(self.behavior_classes.keys()),
             "verbose": False,
         }
         results = self.model.predict(frame, **predict_kwargs)
-        inference_time_ms = round((time.perf_counter() - start_time) * 1000.0, 2)
 
         if results and len(results) > 0:
             result = results[0]
@@ -238,27 +445,267 @@ class BehaviorDetector:
                 for box in boxes:
                     cls_id = int(box.cls[0].item())
                     conf = float(box.conf[0].item())
-                    xyxy = box.xyxy[0].tolist()
+                    xyxy = [round(float(c), 2) for c in box.xyxy[0].tolist()]
 
                     if cls_id not in self.behavior_classes:
                         continue
                     cls_name = self.behavior_classes[cls_id]
-
-                    behaviors.append({
+                    raw_primary_behaviors.append({
                         "class_id": cls_id,
                         "class_name": cls_name,
                         "confidence": round(conf, 4),
-                        "bbox": [round(float(c), 2) for c in xyxy],
+                        "bbox": xyxy,
                     })
 
+        aux_behaviors: list[dict] = []
+        if self.aux_webcam_model is not None and frame.size > 0 and int(np.ptp(frame)) > 5:
+            try:
+                aux_results = self.aux_webcam_model.predict(
+                    frame,
+                    conf=0.20,
+                    imgsz=self.imgsz,
+                    device=self.device,
+                    verbose=False,
+                )
+                if aux_results and len(aux_results) > 0:
+                    aux_res = aux_results[0]
+                    aux_boxes = aux_res.boxes
+                    if aux_boxes is not None:
+                        for box in aux_boxes:
+                            raw_id = int(box.cls[0].item())
+                            raw_name = str(aux_res.names.get(raw_id, str(raw_id))).strip()
+                            mapped = AUX_WEBCAM_BEHAVIOR_MAP.get(raw_name)
+                            if mapped is None:
+                                continue
+                            mapped_id, mapped_name = mapped
+                            conf = float(box.conf[0].item())
+                            xyxy = [round(float(c), 2) for c in box.xyxy[0].tolist()]
+                            aux_behaviors.append({
+                                "class_id": mapped_id,
+                                "class_name": mapped_name,
+                                "confidence": round(conf, 4),
+                                "bbox": xyxy,
+                            })
+            except Exception as exc:
+                logger.debug("Auxiliary behavior inference skipped: %s", exc)
+
+        fused_behaviors = self._fuse_behavior_cues(
+            frame=frame,
+            primary_behaviors=raw_primary_behaviors,
+            aux_behaviors=aux_behaviors,
+            object_cues=object_cues,
+        )
+        inference_time_ms = round((time.perf_counter() - start_time) * 1000.0, 2)
+
         return {
-            "behaviors": behaviors,
+            "behaviors": fused_behaviors,
             "inference_time_ms": inference_time_ms,
         }
 
+    def _fuse_behavior_cues(
+        self,
+        frame: np.ndarray,
+        primary_behaviors: list[dict],
+        aux_behaviors: list[dict],
+        object_cues: dict | None,
+    ) -> list[dict]:
+        cues = object_cues or {}
+        persons = cues.get("persons", [])
+        phones = cues.get("phones", [])
+        foods = cues.get("foods", [])
+        drinks = cues.get("drinks", [])
+
+        candidates: list[dict] = []
+
+        if not persons:
+            for beh in primary_behaviors:
+                if beh["confidence"] >= max(self.conf_thresh, 0.22):
+                    candidates.append(beh)
+            for beh in aux_behaviors:
+                if beh["confidence"] >= 0.35:
+                    candidates.append(beh)
+            for phone in phones:
+                if phone["confidence"] >= 0.20:
+                    candidates.append({
+                        "class_id": 2,
+                        "class_name": "Using Phone",
+                        "confidence": round(min(0.95, max(phone["confidence"] + 0.30, 0.55)), 4),
+                        "bbox": phone["bbox"],
+                    })
+            for food in foods:
+                if food["confidence"] >= 0.20:
+                    candidates.append({
+                        "class_id": 6,
+                        "class_name": "Eating",
+                        "confidence": round(min(0.95, max(food["confidence"] + 0.35, 0.55)), 4),
+                        "bbox": food["bbox"],
+                    })
+            return _deduplicate_behaviors(candidates)
+
+        h, w = frame.shape[:2]
+        frame_area = max(float(h * w), 1.0)
+        max_person_area = max((_bbox_area(p["bbox"]) for p in persons), default=1.0)
+
+        for person in persons:
+            p_box = person["bbox"]
+            p_area = max(_bbox_area(p_box), 1.0)
+            # Skip tiny background/reflection person boxes when a prominent foreground person is present
+            if max_person_area >= 0.20 * frame_area and p_area < 0.15 * max_person_area:
+                continue
+
+            exp_p_box = _expand_bbox(p_box, frame.shape, scale_x=0.12, scale_y=0.12)
+            px1, py1, px2, py2 = p_box
+            pw = max(px2 - px1, 1.0)
+            ph = max(py2 - py1, 1.0)
+
+            has_phone = False
+            has_eating = False
+
+            # --- 1. USING PHONE CUES (class_id = 2) ---
+            best_phone_conf = 0.0
+            for phone in phones:
+                overlap = _bbox_overlap_ratio(phone["bbox"], exp_p_box)
+                if overlap >= 0.35:
+                    boosted = min(0.96, max(float(phone["confidence"]) + 0.35, 0.58))
+                    best_phone_conf = max(best_phone_conf, boosted)
+
+            for beh in aux_behaviors:
+                if beh["class_id"] == 2 and beh["confidence"] >= 0.35:
+                    if (
+                        _bbox_overlap_ratio(beh["bbox"], exp_p_box) >= 0.35
+                        or _bbox_iou(beh["bbox"], p_box) >= 0.25
+                    ):
+                        boosted = min(0.95, max(float(beh["confidence"]) + 0.20, 0.56))
+                        best_phone_conf = max(best_phone_conf, boosted)
+
+            for beh in primary_behaviors:
+                if beh["class_id"] == 2 and beh["confidence"] >= 0.22:
+                    if (
+                        _bbox_overlap_ratio(beh["bbox"], exp_p_box) >= 0.35
+                        and _bbox_area(beh["bbox"]) >= 0.10 * p_area
+                    ):
+                        best_phone_conf = max(best_phone_conf, float(beh["confidence"]))
+
+            if best_phone_conf > 0.0:
+                has_phone = True
+                candidates.append({
+                    "class_id": 2,
+                    "class_name": "Using Phone",
+                    "confidence": round(best_phone_conf, 4),
+                    "bbox": list(p_box),
+                })
+
+            # --- 2. EATING CUES (class_id = 6) ---
+            best_eating_conf = 0.0
+            face_feat = self._extract_person_face_features(frame, p_box)
+            mouth_xy = face_feat.get("mouth_center_xy") if face_feat else None
+
+            for food in foods:
+                f_box = food["bbox"]
+                f_cx = 0.5 * (f_box[0] + f_box[2])
+                overlap = _bbox_overlap_ratio(f_box, exp_p_box)
+                in_central_span = (px1 + 0.10 * pw) <= f_cx <= (px2 - 0.10 * pw)
+                if overlap >= 0.35 and in_central_span:
+                    boosted = min(0.95, max(float(food["confidence"]) + 0.40, 0.60))
+                    best_eating_conf = max(best_eating_conf, boosted)
+
+            for drink in drinks:
+                d_box = drink["bbox"]
+                d_cx = 0.5 * (d_box[0] + d_box[2])
+                d_cy = 0.5 * (d_box[1] + d_box[3])
+                overlap = _bbox_overlap_ratio(d_box, exp_p_box)
+                in_central_span = (px1 + 0.18 * pw) <= d_cx <= (px2 - 0.18 * pw)
+                in_upper_body = d_cy <= (py1 + 0.68 * ph)
+                near_mouth = (
+                    mouth_xy is not None
+                    and abs(d_cx - float(mouth_xy[0])) <= 0.25 * pw
+                    and abs(d_cy - float(mouth_xy[1])) <= 0.28 * ph
+                )
+                if overlap >= 0.40 and ((in_central_span and in_upper_body) or near_mouth):
+                    boosted = min(0.92, max(float(drink["confidence"]) + 0.30, 0.58))
+                    best_eating_conf = max(best_eating_conf, boosted)
+
+            for beh in primary_behaviors:
+                if beh["class_id"] == 6 and beh["confidence"] >= 0.22:
+                    if (
+                        _bbox_overlap_ratio(beh["bbox"], exp_p_box) >= 0.35
+                        and _bbox_area(beh["bbox"]) >= 0.10 * p_area
+                    ):
+                        best_eating_conf = max(best_eating_conf, float(beh["confidence"]))
+
+            if face_feat is not None:
+                mouth_open = face_feat.get("mouth_open_ratio")
+                if mouth_open is not None and float(mouth_open) >= 0.095 and not has_phone:
+                    mouth_conf = min(0.90, 0.56 + (float(mouth_open) - 0.095) * 2.5)
+                    best_eating_conf = max(best_eating_conf, mouth_conf)
+
+            if best_eating_conf > 0.0:
+                has_eating = True
+                candidates.append({
+                    "class_id": 6,
+                    "class_name": "Eating",
+                    "confidence": round(best_eating_conf, 4),
+                    "bbox": list(p_box),
+                })
+
+            # --- 3. SLEEPING CUES (class_id = 1) ---
+            if not has_phone and not has_eating:
+                best_sleeping_conf = 0.0
+                eyes_clearly_awake = False
+
+                if face_feat is not None:
+                    eyes_valid = bool(face_feat.get("eyes_valid"))
+                    ear_left = face_feat.get("ear_left")
+                    ear_right = face_feat.get("ear_right")
+                    pose = face_feat.get("head_pose") or {}
+                    pose_valid = bool(pose.get("valid"))
+                    roll_deg = abs(float(pose.get("roll_deg") or 0.0)) if pose_valid else 0.0
+                    pitch_deg = abs(float(pose.get("pitch_deg") or 0.0)) if pose_valid else 0.0
+
+                    if eyes_valid and ear_left is not None and ear_right is not None:
+                        mean_ear = 0.5 * (float(ear_left) + float(ear_right))
+                        if mean_ear < 0.155:
+                            ear_conf = min(0.94, max(0.60, 0.60 + (0.155 - mean_ear) * 3.5))
+                            best_sleeping_conf = max(best_sleeping_conf, ear_conf)
+                        elif mean_ear >= 0.180 and roll_deg < 16.0 and pitch_deg < 18.0:
+                            eyes_clearly_awake = True
+
+                    if pose_valid and not eyes_clearly_awake and (roll_deg >= 18.0 or pitch_deg >= 18.0):
+                        tilt_score = max(roll_deg - 18.0, pitch_deg - 18.0, 0.0)
+                        pose_conf = min(0.92, 0.58 + tilt_score * 0.015)
+                        best_sleeping_conf = max(best_sleeping_conf, pose_conf)
+
+                for beh in aux_behaviors:
+                    if beh["class_id"] == 1 and beh["confidence"] >= 0.32 and not eyes_clearly_awake:
+                        if (
+                            _bbox_overlap_ratio(beh["bbox"], exp_p_box) >= 0.30
+                            or _bbox_iou(beh["bbox"], p_box) >= 0.20
+                        ):
+                            boosted = min(0.94, max(float(beh["confidence"]) + 0.25, 0.58))
+                            best_sleeping_conf = max(best_sleeping_conf, boosted)
+
+                for beh in primary_behaviors:
+                    if beh["class_id"] == 1 and beh["confidence"] >= 0.14 and not eyes_clearly_awake:
+                        overlap = _bbox_overlap_ratio(beh["bbox"], exp_p_box)
+                        area_ratio = _bbox_area(beh["bbox"]) / p_area
+                        face_hidden = face_feat is None or not bool(face_feat.get("eyes_valid"))
+                        if (overlap >= 0.30 and area_ratio >= 0.10) or (face_hidden and beh["confidence"] >= 0.14):
+                            boosted = min(0.90, max(float(beh["confidence"]) + 0.35, 0.55))
+                            best_sleeping_conf = max(best_sleeping_conf, boosted)
+
+                if best_sleeping_conf > 0.0:
+                    candidates.append({
+                        "class_id": 1,
+                        "class_name": "Sleeping",
+                        "confidence": round(best_sleeping_conf, 4),
+                        "bbox": list(p_box),
+                    })
+
+        return _deduplicate_behaviors(candidates)
+
 
 class UnifiedPipeline:
-    """Combines ObjectDetector (yolov8n) and BehaviorDetector (behavior_yolo) into one flow."""
+    """Combines ObjectDetector (yolov8n) and BehaviorDetector (behavior_yolo + cues) into one flow."""
 
     def __init__(
         self,
@@ -302,8 +749,9 @@ class UnifiedPipeline:
         obj_res = self.object_detector.detect(frame)
         objects = obj_res["detections"]
         occupancy = obj_res["occupancy"]
+        raw_cues = obj_res.get("raw_cues")
 
-        beh_res = self.behavior_detector.detect(frame)
+        beh_res = self.behavior_detector.detect(frame, object_cues=raw_cues)
         behaviors = beh_res["behaviors"]
 
         total_inference_time = round(
