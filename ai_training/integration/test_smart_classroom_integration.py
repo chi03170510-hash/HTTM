@@ -1,4 +1,4 @@
-"""Tests for AI-Smart-Classroom-Monitoring-System core integration into HTTM Camera Live."""
+z"""Tests for AI-Smart-Classroom-Monitoring-System core integration into HTTM Camera Live."""
 
 import os
 import queue
