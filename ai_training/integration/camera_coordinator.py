@@ -1,10 +1,11 @@
-﻿import json
+import json
 import queue
 import subprocess
 import sys
 import tempfile
 import threading
 import time
+from concurrent.futures import ThreadPoolExecutor
 from pathlib import Path
 
 import cv2
@@ -15,7 +16,7 @@ ROOT = INTEGRATION.parents[1]
 sys.path.insert(0, str(INTEGRATION))
 from person_face_association_v4 import associate_v4
 
-CAMERA_INDEX = 1
+CAMERA_INDEX = 0
 MAX_FRAMES = 10
 WORKER_TIMEOUT = 90
 
@@ -145,21 +146,16 @@ def main():
 
                 start = time.perf_counter()
 
-                face_start = time.perf_counter()
+                def _run_timed(worker):
+                    t0 = time.perf_counter()
+                    res = worker.process_frame(image_path, frame_id)
+                    return res, time.perf_counter() - t0
 
-                face_result = face_worker.process_frame(
-                    image_path, frame_id
-                )
-
-                face_time = time.perf_counter() - face_start
-
-                hybrid_start = time.perf_counter()
-
-                hybrid_result = hybrid_worker.process_frame(
-                    image_path, frame_id
-                )
-
-                hybrid_time = time.perf_counter() - hybrid_start
+                with ThreadPoolExecutor(max_workers=2) as pool:
+                    fut_face = pool.submit(_run_timed, face_worker)
+                    fut_hybrid = pool.submit(_run_timed, hybrid_worker)
+                    face_result, face_time = fut_face.result()
+                    hybrid_result, hybrid_time = fut_hybrid.result()
 
                 face_tracks = [
                     (
@@ -176,6 +172,7 @@ def main():
                 matches = associate_v4(
                     face_tracks,
                     hybrid_result["people"],
+                    adaptive_close_up=True,
                 )
 
                 for match in matches:

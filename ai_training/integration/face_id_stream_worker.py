@@ -1,4 +1,4 @@
-﻿import json
+import json
 import sys
 from pathlib import Path
 
@@ -7,8 +7,10 @@ from bbox_visual_metadata import enabled as visual_enabled, write_source
 from face_inference_device import load_live_face_model, face_runtime
 
 AI_DIR = Path(__file__).resolve().parents[1]
+sys.path.insert(0, str(AI_DIR))
 sys.path.insert(0, str(AI_DIR / "recognition"))
 
+from src.image_preprocessing import preprocess_frame
 from recognize_camera_tracking import (
     load_database,
     load_face_model,
@@ -48,6 +50,8 @@ def main():
 
                 if frame is None:
                     raise RuntimeError("Cannot read image")
+
+                frame = preprocess_frame(frame)
 
                 faces = []
 

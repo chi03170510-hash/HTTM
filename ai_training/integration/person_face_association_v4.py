@@ -1,9 +1,9 @@
-﻿import math
+import math
 
 from person_face_association_v3 import associate_v3
 
 
-def associate_v4(face_tracks, people, max_distance=0.30, min_margin=0.15):
+def associate_v4(face_tracks, people, max_distance=0.30, min_margin=0.15, adaptive_close_up=False):
     base_matches = associate_v3(face_tracks, people)
 
     matched_faces = {m["track_id"] for m in base_matches}
@@ -54,21 +54,27 @@ def associate_v4(face_tracks, people, max_distance=0.30, min_margin=0.15):
             rx = (cx - x1) / (x2 - x1)
             ry = (cy - y1) / (y2 - y1)
 
-            if not (0 <= rx <= 1 and 0 <= ry <= 0.6):
+            pw = x2 - x1
+            ph = y2 - y1
+            is_close_up = adaptive_close_up and (pw / max(1.0, ph) >= 1.02 or ph >= 300.0)
+            ry_limit = 0.68 if is_close_up else 0.6
+            if not (0 <= rx <= 1 and 0 <= ry <= ry_limit):
                 continue
 
-            distance = math.hypot(rx - 0.5, ry - 0.25)
+            anchor_y = 0.32 if (is_close_up and ry > 0.28) else 0.25
+            distance = math.hypot(rx - 0.5, ry - anchor_y)
+            eff_max_dist = max(max_distance, 0.38) if is_close_up else max_distance
 
-            candidates.append((distance, person, box))
+            candidates.append((distance, person, box, eff_max_dist))
 
         candidates.sort(key=lambda item: item[0])
 
         if not candidates:
             continue
 
-        best_distance, best_person, best_box = candidates[0]
+        best_distance, best_person, best_box, best_max_dist = candidates[0]
 
-        if best_distance > max_distance:
+        if best_distance > best_max_dist:
             continue
 
         if len(candidates) > 1:

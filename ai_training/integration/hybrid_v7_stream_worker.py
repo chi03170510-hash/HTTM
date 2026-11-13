@@ -1,4 +1,4 @@
-﻿import json
+import json
 import sys
 from pathlib import Path
 
@@ -13,6 +13,7 @@ AI = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(AI))
 
 from src.face_features import FaceFeatureExtractor
+from src.image_preprocessing import preprocess_frame
 from src.spatial_fusion import spatial_fusion, SpatialConfig
 from src.hybrid_v3 import infer_v3
 from src.hybrid_v7 import (
@@ -103,6 +104,9 @@ class HybridV7Stream:
             raise RuntimeError(
                 f"Cannot read image: {image_path}"
             )
+
+        if self.config.get("preprocess_clahe_enabled", True):
+            frame = preprocess_frame(frame, self.config)
 
         obj = prepare_objects_v7(
             frame,

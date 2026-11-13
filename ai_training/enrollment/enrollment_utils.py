@@ -1,4 +1,4 @@
-﻿from pathlib import Path
+from pathlib import Path
 import re
 
 import cv2
@@ -33,7 +33,7 @@ def load_face_model():
 
     app.prepare(
         ctx_id=-1,
-        det_size=(320, 320)
+        det_size=(640, 640)
     )
 
     return app

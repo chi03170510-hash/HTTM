@@ -116,5 +116,15 @@
   "food_crop_phone_candidate_min": 0.45,
   "dataset_audit_path": "ai_training/reports/student_v5_dataset_v2_audit.md",
   "model_training_enabled": false,
-  "training_reason": "CPU/held-out regression image set is not a labeled evaluation set; no safe model replacement evidence is available"
+  "training_reason": "CPU/held-out regression image set is not a labeled evaluation set; no safe model replacement evidence is available",
+  "preprocess_clahe_enabled": true,
+  "preprocess_clahe_clip_limit": 1.8,
+  "preprocess_clahe_tile_grid": 8,
+  "preprocess_auto_gamma_enabled": true,
+  "preprocess_roi_sharpen_enabled": true,
+  "preprocess_roi_sharpen_strength": 0.45,
+  "sleeping_multimodal_enabled": true,
+  "sleeping_multimodal_yolo_min_conf": 0.40,
+  "sleeping_multimodal_pitch_min_deg": 25.0,
+  "sleeping_multimodal_score_threshold": 0.48
 }

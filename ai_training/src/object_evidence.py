@@ -50,13 +50,13 @@ class UsingPhonePrototype:
         if tasks is not None and self.pose_model_path.is_file():
             self.pose = tasks.vision.PoseLandmarker.create_from_options(tasks.vision.PoseLandmarkerOptions(
                 base_options=tasks.BaseOptions(model_asset_path=str(self.pose_model_path)),
-                running_mode=image_mode, num_poses=2,
+                running_mode=image_mode, num_poses=10,
                 min_pose_detection_confidence=0.35, min_pose_presence_confidence=0.35,
                 min_tracking_confidence=0.35))
         if tasks is not None and self.hand_model_path.is_file():
             self.hand = tasks.vision.HandLandmarker.create_from_options(tasks.vision.HandLandmarkerOptions(
                 base_options=tasks.BaseOptions(model_asset_path=str(self.hand_model_path)),
-                running_mode=image_mode, num_hands=2))
+                running_mode=image_mode, num_hands=10))
         self.model_version = f"Ultralytics {ultralytics.__version__}; COCO {self.model_path.name}"
         mp_version = getattr(mp,"__version__","package unavailable") if mp is not None else "package unavailable"
         self.pose_version = f"MediaPipe Tasks PoseLandmarker {mp_version}; {self.pose_model_path.name}" if self.pose else "unavailable; COCO-only fallback"

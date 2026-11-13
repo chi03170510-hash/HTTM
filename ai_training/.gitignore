@@ -13,8 +13,10 @@ __pycache__/
 *.log
 *.tmp
 
-# Training and evaluation data/output (do not add classroom imagery/video)
-datasets/
+# Training and evaluation data/output (keep httm_webcam_behavior_v3 tracked)
+datasets/*
+!datasets/httm_webcam_behavior_v3/
+!datasets/httm_webcam_behavior_v3/**
 test_images/
 videos/
 runs/

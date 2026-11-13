@@ -1,0 +1,102 @@
+{
+  "splits": {
+    "train": {
+      "raw_images": 14,
+      "augmented_images": 56,
+      "total_images": 70,
+      "sleeping_boxes": 30,
+      "using_phone_boxes": 30,
+      "hard_negatives": 15
+    },
+    "val": {
+      "raw_images": 10,
+      "augmented_images": 0,
+      "total_images": 10,
+      "sleeping_boxes": 3,
+      "using_phone_boxes": 5,
+      "hard_negatives": 2
+    },
+    "test": {
+      "raw_images": 10,
+      "augmented_images": 0,
+      "total_images": 10,
+      "sleeping_boxes": 0,
+      "using_phone_boxes": 10,
+      "hard_negatives": 0
+    }
+  },
+  "videos_processed": [
+    {
+      "file": "T01_normal.mp4",
+      "mode": "hard_negative",
+      "split": "train",
+      "kept_raw_frames": 3
+    },
+    {
+      "file": "T04_raising_hand.mp4",
+      "mode": "hard_negative",
+      "split": "val",
+      "kept_raw_frames": 2
+    },
+    {
+      "file": "T02_sleeping.mp4",
+      "mode": "sleeping",
+      "split": "train",
+      "kept_raw_frames": 2
+    },
+    {
+      "file": "T06B_sleeping_desk.mp4",
+      "mode": "sleeping",
+      "split": "train",
+      "kept_raw_frames": 3
+    },
+    {
+      "file": "T06_sleeping.mp4",
+      "mode": "sleeping",
+      "split": "val",
+      "kept_raw_frames": 3
+    },
+    {
+      "file": "T07_using_phone.mp4",
+      "mode": "using_phone",
+      "split": "train",
+      "kept_raw_frames": 3
+    },
+    {
+      "file": "T03_using_phone.mp4",
+      "mode": "using_phone",
+      "split": "train",
+      "kept_raw_frames": 1
+    },
+    {
+      "file": "T07B_phone_conf025.mp4",
+      "mode": "using_phone",
+      "split": "val",
+      "kept_raw_frames": 3
+    },
+    {
+      "file": "httm_webcam_20261104_135031_239365.mp4",
+      "mode": "using_phone",
+      "split": "test",
+      "kept_raw_frames": 8
+    },
+    {
+      "file": "T05_round3.mp4",
+      "mode": "auto_ensemble",
+      "split": "train",
+      "kept_raw_frames": 2
+    },
+    {
+      "file": "T08_round3.mp4",
+      "mode": "auto_ensemble",
+      "split": "test",
+      "kept_raw_frames": 2
+    },
+    {
+      "file": "webcam_ai_v2.mp4",
+      "mode": "auto_ensemble",
+      "split": "val",
+      "kept_raw_frames": 2
+    }
+  ]
+}

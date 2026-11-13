@@ -58,11 +58,13 @@ def _student_id(value):
 
 
 class BehaviorDurationTracker:
-    def __init__(self, max_gap=5.0):
+    def __init__(self, max_gap=5.0, anchor_sleeping_identity=False):
         if not math.isfinite(max_gap) or max_gap <= 0:
             raise ValueError("max_gap must be finite and positive")
         self.max_gap = max_gap
+        self.anchor_sleeping_identity = bool(anchor_sleeping_identity)
         self._episodes = {}
+        self._identity_anchors = {}
         self._last_frame = None
         self._last_capture = None
 
@@ -87,6 +89,7 @@ class BehaviorDurationTracker:
         if (not timestamp_valid or (self._last_capture is not None
                                     and captured_at - self._last_capture > self.max_gap)):
             self._episodes.clear()
+            self._identity_anchors.clear()
         if timestamp_valid:
             self._last_capture = captured_at
 
@@ -131,6 +134,37 @@ class BehaviorDurationTracker:
                 identity_status = "ambiguous_face"
             if identity_status != "matched":
                 sid = None
+                if (
+                    self.anchor_sleeping_identity
+                    and timestamp_valid
+                    and identity_status in ("unassociated", "unknown")
+                    and (source.get("behaviors", {}).get("sleeping", {}) or {}).get("state") == "detected"
+                ):
+                    anchor = self._identity_anchors.get(tid)
+                    if anchor is not None and captured_at - anchor["last_seen"] <= self.max_gap:
+                        ab = anchor["bbox"]
+                        tb = tuple(track["bbox"])
+                        x1, y1 = max(ab[0], tb[0]), max(ab[1], tb[1])
+                        x2, y2 = min(ab[2], tb[2]), min(ab[3], tb[3])
+                        inter = max(0.0, x2 - x1) * max(0.0, y2 - y1)
+                        union = (max(0.0, ab[2] - ab[0]) * max(0.0, ab[3] - ab[1])
+                                 + max(0.0, tb[2] - tb[0]) * max(0.0, tb[3] - tb[1]) - inter)
+                        iou = inter / union if union > 0 else 0.0
+                        anchored_sid = anchor["student_id"]
+                        if iou >= 0.65 and len(student_claims[anchored_sid]) == 0:
+                            sid = anchored_sid
+                            identity_status = "anchored_sleeping"
+                            self._identity_anchors[tid] = {
+                                "student_id": sid,
+                                "bbox": tb,
+                                "last_seen": captured_at,
+                            }
+            elif timestamp_valid and sid is not None:
+                self._identity_anchors[tid] = {
+                    "student_id": sid,
+                    "bbox": tuple(track["bbox"]),
+                    "last_seen": captured_at,
+                }
 
             durations = []
             for name in BEHAVIORS:

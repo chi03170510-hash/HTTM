@@ -1,0 +1,8 @@
+path: H:/HTTM/ai_training/datasets/httm_webcam_behavior_v3
+train: images/train
+val: images/val
+test: images/test
+nc: 2
+names:
+  0: sleeping
+  1: using_phone

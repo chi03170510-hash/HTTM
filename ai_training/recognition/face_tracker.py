@@ -1,4 +1,4 @@
-﻿from collections import Counter, deque
+from collections import Counter, deque
 from dataclasses import dataclass, field
 
 
@@ -33,8 +33,27 @@ class FaceTrack:
         default_factory=lambda: deque(maxlen=5)
     )
     score: float = 0.0
+    velocity: tuple = (0.0, 0.0)
+
+    def predict_bbox(self, timestamp):
+        dt = max(0.0, float(timestamp) - float(self.last_seen))
+        if dt <= 0.0 or dt > 5.0:
+            return self.bbox
+        vx, vy = self.velocity
+        dx, dy = vx * dt, vy * dt
+        x1, y1, x2, y2 = self.bbox
+        return (x1 + dx, y1 + dy, x2 + dx, y2 + dy)
 
     def update(self, bbox, student_id, score, timestamp):
+        dt = float(timestamp) - float(self.last_seen)
+        if 0.01 < dt <= 5.0 and self.bbox is not None and len(self.bbox) == 4:
+            old_cx = 0.5 * (self.bbox[0] + self.bbox[2])
+            old_cy = 0.5 * (self.bbox[1] + self.bbox[3])
+            new_cx = 0.5 * (bbox[0] + bbox[2])
+            new_cy = 0.5 * (bbox[1] + bbox[3])
+            vx = (new_cx - old_cx) / dt
+            vy = (new_cy - old_cy) / dt
+            self.velocity = (0.5 * self.velocity[0] + 0.5 * vx, 0.5 * self.velocity[1] + 0.5 * vy)
         self.bbox = bbox
         self.last_seen = timestamp
         self.labels.append(student_id)
@@ -56,9 +75,10 @@ class FaceTrack:
 
 
 class FaceTracker:
-    def __init__(self, iou_threshold=0.3, max_age=2.0):
+    def __init__(self, iou_threshold=0.3, max_age=2.0, motion_matching=False):
         self.iou_threshold = iou_threshold
         self.max_age = max_age
+        self.motion_matching = motion_matching
         self.tracks = {}
         self.next_id = 1
 
@@ -78,6 +98,8 @@ class FaceTracker:
             for detection_index, detection in enumerate(detections):
                 bbox, student_id, score = detection
                 iou = calculate_iou(track.bbox, bbox)
+                if self.motion_matching:
+                    iou = max(iou, calculate_iou(track.predict_bbox(timestamp), bbox))
 
                 if iou >= self.iou_threshold:
                     candidates.append(

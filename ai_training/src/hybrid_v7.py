@@ -15,6 +15,7 @@ from src.hybrid_v4 import prepare_objects_v4, debug_evidence_rows
 from src.hybrid_v5 import TemporalV5Fusion, debug_sidecar_v5
 from src.hybrid_v3 import spatial_v3
 from src.hybrid_v4 import _unique_center_owner
+from src.image_preprocessing import denoise_and_sharpen_roi
 # V7 owns the rule implementations below. Do not bind its public object
 # preparer to an imported V6.1 function before those definitions are loaded.
 
@@ -136,6 +137,8 @@ def mouth_focused_food_proposals_v7(frame, people, object_detector, config, devi
         target=int(config.get("food_mouth_crop_min_side",640));max_scale=float(config.get("food_mouth_crop_max_upscale",3.5))
         scale=min(max_scale,max(1.,target/max(1,min(crop.shape[:2]))))
         if scale>1.01:crop=cv2.resize(crop,None,fx=scale,fy=scale,interpolation=cv2.INTER_CUBIC)
+        if config.get("preprocess_roi_sharpen_enabled", True):
+            crop=denoise_and_sharpen_roi(crop, strength=float(config.get("preprocess_roi_sharpen_strength", .45)))
         crops.append(crop);meta.append({"person_ref":person.get("person_ref"),"crop_xyxy_frame":[x1,y1,x2,y2],"scale":scale,
             "crop_head_height_px":crop_head_h,"serial":serial});serial+=1
     if not crops:return [],{"enabled":True,"crop_count":0,"raw_count":0,"note":"no eligible mouth/hand candidates"}
@@ -277,6 +280,8 @@ def _crop_person_object_proposals(frame, objects, people, config, device):
         if crop.size==0:continue
         scale=min(max_scale,max(1.,target/max(1,min(crop.shape[:2]))))
         if scale>1.01:crop=cv2.resize(crop,None,fx=scale,fy=scale,interpolation=cv2.INTER_CUBIC)
+        if config.get("preprocess_roi_sharpen_enabled", True):
+            crop=denoise_and_sharpen_roi(crop, strength=float(config.get("preprocess_roi_sharpen_strength", .45)))
         crops.append(crop);metadata.append({"person_detection_id":person.get("detection_id"),"origin_xy":[ix1,iy1],"scale":scale,"crop_xyxy_frame":[ix1,iy1,ix2,iy2]})
     if not crops:return []
     classes=[i for i,n in objects.class_names.items() if n=="cell phone" or n in objects.food_classes]
@@ -567,6 +572,70 @@ def decide_sleeping_candidate(score, box, config):
     return "suspected","yolo_sleeping_candidate_below_detection_threshold"
 
 
+def assess_multimodal_sleeping_v7(score, box, face, pose_landmarks, person_box, config):
+    """Combine YOLO sleeping confidence with geometric cues (EAR, head pitch/roll, pose head-down)."""
+    state, reason = decide_sleeping_candidate(score, box, config)
+    if state != "suspected" or not config.get("sleeping_multimodal_enabled", True):
+        return state, reason, {}
+    min_yolo = float(config.get("sleeping_multimodal_yolo_min_conf", 0.40))
+    if score is None or float(score) < min_yolo:
+        return state, reason, {}
+    face = face or {}
+    pose_landmarks = pose_landmarks or {}
+    ear_thresh = float(config.get("sleeping_ear_closed", 0.18))
+    ear_vals = [float(face[k]) for k in ("ear_left", "ear_right", "ear")
+                if face.get(k) is not None and math.isfinite(float(face[k]))]
+    ear_mean = sum(ear_vals) / len(ear_vals) if ear_vals else None
+    ear_closed = ear_mean is not None and ear_mean < ear_thresh
+
+    hp = face.get("head_pose") if isinstance(face.get("head_pose"), dict) else face
+    pitch = hp.get("pitch_deg")
+    roll = hp.get("roll_deg")
+    pitch_min = float(config.get("sleeping_multimodal_pitch_min_deg", 25.0))
+    tilt_min = float(config.get("sleeping_tilt_min_deg", 15.0))
+    head_pitched_or_tilted = (
+        (pitch is not None and math.isfinite(float(pitch)) and abs(float(pitch)) >= pitch_min)
+        or (roll is not None and math.isfinite(float(roll)) and abs(float(roll)) >= tilt_min)
+    )
+
+    pose_head_down = False
+    if person_box and len(person_box) == 4:
+        ph = max(1.0, float(person_box[3]) - float(person_box[1]))
+        nose = pose_landmarks.get("nose") or {}
+        if float(nose.get("visibility") or 0.0) >= 0.40:
+            nx, ny = float(nose.get("x", 0.0)), float(nose.get("y", 0.0))
+            sh_ys = [
+                float((pose_landmarks.get(k) or {}).get("y", 0.0))
+                for k in ("left_shoulder", "right_shoulder")
+                if float((pose_landmarks.get(k) or {}).get("visibility") or 0.0) >= 0.40
+            ]
+            if sh_ys and (ny - (sum(sh_ys) / len(sh_ys))) / ph >= -0.10:
+                pose_head_down = True
+            support_dist = float(config.get("sleeping_head_support_distance_person_height", 0.14)) * ph
+            for wk in ("left_wrist", "right_wrist"):
+                wlm = pose_landmarks.get(wk) or {}
+                if float(wlm.get("visibility") or 0.0) >= 0.40:
+                    if math.hypot(nx - float(wlm.get("x", 0.0)), ny - float(wlm.get("y", 0.0))) <= support_dist:
+                        pose_head_down = True
+
+    has_geometric_cue = ear_closed or head_pitched_or_tilted or pose_head_down
+    multimodal_score = (
+        0.60 * float(score)
+        + 0.25 * (1.0 if ear_closed else 0.0)
+        + 0.25 * (1.0 if (head_pitched_or_tilted or pose_head_down) else 0.0)
+    )
+    meta = {
+        "multimodal_sleeping_score": round(multimodal_score, 4),
+        "ear_mean": round(ear_mean, 4) if ear_mean is not None else None,
+        "ear_closed": ear_closed,
+        "head_pitched_or_tilted": head_pitched_or_tilted,
+        "pose_head_down": pose_head_down,
+    }
+    if has_geometric_cue and multimodal_score >= float(config.get("sleeping_multimodal_score_threshold", 0.48)):
+        return "detected", "multimodal_sleeping_yolo_plus_geometric_evidence", meta
+    return state, reason, meta
+
+
 def decide_phone_candidate_v6_1(score, association_status, phone_found, config):
     """A behavior candidate is confirmed only with a unique same-person phone."""
     if score is None:return "unknown","BEHAVIOR_MODEL_MISS"
@@ -736,20 +805,26 @@ def spatial_v6(frame, detections, object_evidence, face_extractor, config,
         sleep_best=max(sleep_candidates,key=lambda d:float(d.get("confidence",0)),default=None)
         sleep=person["behaviors"]["sleeping"]
         sleep["model_confidence"]=float(sleep_best["confidence"]) if sleep_best else None
-        sleep_state,sleep_reason=decide_sleeping_candidate(float(sleep_best["confidence"]) if sleep_best else None,
-                                                           sleep_best.get("bbox_xyxy") if sleep_best else None,config)
+        sleep_state,sleep_reason,sleep_mm=assess_multimodal_sleeping_v7(
+            float(sleep_best["confidence"]) if sleep_best else None,
+            sleep_best.get("bbox_xyxy") if sleep_best else None,
+            face, evidence.get("pose_landmarks",{}), box, config)
         if sleep_state=="detected":
-            _set_decision(sleep,"detected","yolo_sleeping_candidate_threshold_met",bbox=sleep_best["bbox_xyxy"],
-                supporting=["behavior_yolo_sleeping_candidate"],
+            _set_decision(sleep,"detected",sleep_reason,bbox=sleep_best["bbox_xyxy"],
+                supporting=(["behavior_yolo_sleeping_candidate","multimodal_geometric_sleeping_cues"]
+                            if sleep_reason=="multimodal_sleeping_yolo_plus_geometric_evidence"
+                            else ["behavior_yolo_sleeping_candidate"]),
                 extra={"sleeping_yolo_box":sleep_best["bbox_xyxy"],"sleeping_yolo_source":sleep_best.get("source"),
                        "sleeping_yolo_confidence":float(sleep_best["confidence"]),
                        "sleeping_yolo_threshold":float(config["sleeping_yolo_detect_threshold"]),
-                       "pose_or_face_required":False,"raw_yolo_score_is_not_calibrated_probability":True})
+                       "pose_or_face_required":False,"raw_yolo_score_is_not_calibrated_probability":True,
+                       **sleep_mm})
         elif sleep_state=="suspected":
             _set_decision(sleep,"suspected","yolo_sleeping_candidate_below_detection_threshold",
                 missing=["configured_sleeping_yolo_threshold"],extra={"sleeping_yolo_box":sleep_best["bbox_xyxy"],
                 "sleeping_yolo_confidence":float(sleep_best["confidence"]),
-                "sleeping_yolo_threshold":float(config["sleeping_yolo_detect_threshold"]),"pose_or_face_required":False})
+                "sleeping_yolo_threshold":float(config["sleeping_yolo_detect_threshold"]),"pose_or_face_required":False,
+                **sleep_mm})
         else:
             _set_decision(sleep,"not_detected","no_sleeping_box_from_behavior_detector",missing=[])
 
