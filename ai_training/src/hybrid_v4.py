@@ -135,6 +135,12 @@ def prepare_objects_v4(frame, objects, *, config, device="cpu"):
             proposal["person_quality"] = quality
             proposal["person_quality"]["rejected_as_supplement"] = True
             continue
+        supplement_min_conf = float(config.get("person_highres_supplement_min_conf", 0.35))
+        if float(proposal.get("confidence", 0.0)) < supplement_min_conf:
+            proposal["person_quality"] = quality
+            proposal["person_quality"]["rejected_as_supplement"] = True
+            proposal["person_quality"]["rejection_reason"] = "below_person_highres_supplement_min_conf"
+            continue
         proposal.update({
             "detection_id": f"v4_person_{supplemental}",
             "class_name": "person", "class_id": _person_class_id(objects),

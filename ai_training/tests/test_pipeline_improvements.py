@@ -122,6 +122,57 @@ class TestPipelineImprovements(unittest.TestCase):
         sleep_dur = dict((b.name, b.estimated_seconds) for b in frame2.people[0].behaviors)["sleeping"]
         self.assertAlmostEqual(sleep_dur, 2.5)
 
+    def test_adaptive_preprocess_skips_well_lit_frame_and_enhances_dark_frame(self):
+        grad = np.linspace(40, 210, 160, dtype=np.uint8)
+        well_lit = np.broadcast_to(grad[None, :, None], (120, 160, 3)).copy()
+        out_well_lit = preprocess_frame(well_lit, self.cfg)
+        self.assertTrue(np.array_equal(out_well_lit, well_lit))
+
+        dark = np.full((120, 160, 3), 30, dtype=np.uint8)
+        dark[20:100, 30:130] = 55
+        out_dark = preprocess_frame(dark, self.cfg)
+        self.assertGreater(float(np.mean(out_dark)), float(np.mean(dark)))
+
+    def test_unconfirmed_weak_phone_does_not_demote_strong_sleeping_detection(self):
+        from copy import deepcopy
+        from unittest.mock import patch
+        from src.hybrid_v7 import spatial_v7
+
+        cfg = dict(self.cfg)
+        cfg["food_mouth_crop_enabled"] = False
+        pbox = [0, 0, 200, 400]
+        # Strong sleeping detection (0.85) + weak unconfirmed using_phone noise (0.30, no COCO phone object)
+        detections = [
+            {"class_name": "sleeping", "confidence": 0.85, "bbox_xyxy": pbox},
+            {"class_name": "using_phone", "confidence": 0.30, "bbox_xyxy": pbox},
+        ]
+        obj = {
+            "phone_detections": [],
+            "food_detections": [],
+            "food_person_associations": [],
+            "v6_phone_person_associations": [],
+        }
+        base = {
+            "people": [{
+                "person_ref": "p",
+                "bbox_xyxy": pbox,
+                "person_bbox_xyxy_clipped": pbox,
+                "yolo_detections": detections,
+                "evidence": {"face": {}, "pose_landmarks": {}},
+                "behaviors": {
+                    b: {"state": "unknown", "evidence": {}}
+                    for b in ("sleeping", "using_phone", "eating", "turning_back")
+                },
+            }],
+            "phone_detections": [],
+            "food_detections": [],
+        }
+        with patch("src.hybrid_v7.spatial_v3", return_value=deepcopy(base)):
+            out = spatial_v7(None, detections, obj, None, cfg, None, None, None)
+        behaviors = out["people"][0]["behaviors"]
+        self.assertEqual(behaviors["sleeping"]["state"], "detected")
+        self.assertEqual(behaviors["using_phone"]["state"], "suspected")
+
 
 if __name__ == "__main__":
     unittest.main()

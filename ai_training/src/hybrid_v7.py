@@ -29,6 +29,26 @@ def add_sleeping_highres_proposals_v7(frame, model, detections, object_evidence,
     """
     if not config.get("sleeping_highres_probe_enabled", True):
         return [], {"enabled": False, "imgsz": None, "raw_count": 0, "promoted_count": 0}
+    threshold=float(config.get("sleeping_yolo_detect_threshold", .75))
+    person_by_id={p.get("detection_id"):p for p in object_evidence.get("person_detections",[])}
+    eligible_people=[
+        pid for pid, p in person_by_id.items()
+        if person_box_supports_highres_behavior_v7(p.get("bbox_xyxy"), config)
+        and not any(
+            old.get("class_name")=="sleeping"
+            and old.get("person_ref")==pid
+            and float(old.get("confidence",0.))>=threshold
+            for old in detections
+        )
+    ]
+    if not eligible_people:
+        return [], {
+            "enabled": True,
+            "imgsz": int(config.get("sleeping_highres_imgsz", 960)),
+            "raw_count": 0,
+            "promoted_count": 0,
+            "skipped_reason": "no_eligible_person_without_qualifying_sleeping_box",
+        }
     from src.hybrid_v3 import infer_v3
     probe = infer_v3(model, frame, object_evidence, names,
         imgsz=int(config.get("sleeping_highres_imgsz", 960)),
@@ -36,8 +56,6 @@ def add_sleeping_highres_proposals_v7(frame, model, detections, object_evidence,
         iou=float(config.get("sleeping_highres_iou", .50)), device=device,
         roi_enabled=False, padding=0., dedupe_iou=float(config.get("dedupe_iou", .65)))
     raw=[dict(d) for d in probe.get("detections", []) if d.get("class_name")=="sleeping"]
-    threshold=float(config.get("sleeping_yolo_detect_threshold", .75))
-    person_by_id={p.get("detection_id"):p for p in object_evidence.get("person_detections",[])}
     promoted=[]
     for det in raw:
         # A full-frame box can be ambiguous in a crowded class. Keep it in the
@@ -464,16 +482,20 @@ def spatial_v6_1(frame, detections, object_evidence, face_extractor, config, spa
                 "candidate_model_confidence_min":min_score})
         else:det.setdefault("evidence",{})["reason_code"]="BEHAVIOR_MODEL_MISS_OR_NO_CANDIDATE"
         sleep=person["behaviors"]["sleeping"]
-        sleep_det=max((x for x in person.get("yolo_detections",[]) if x.get("class_name")=="sleeping" and x.get("bbox_xyxy")),
+        sleep_det=max((x for x in person.get("yolo_detections",[])
+            if x.get("class_name")=="sleeping" and x.get("bbox_xyxy") and float(x.get("confidence",0.))>=min_score),
             key=lambda x:float(x.get("confidence",0.)),default=None)
         if sleep_det and candidate:
             if det.get("state")=="detected":
                 _set_decision(sleep,"suspected","LABEL_CONFLICT_PHONE_HAS_INDEPENDENT_OBJECT_EVIDENCE",missing=["sleep_specific_evidence"],extra={
                     "reason_code":"LABEL_CONFLICT_PHONE_HAS_INDEPENDENT_OBJECT_EVIDENCE","competing_using_phone_yolo_score":float(candidate.get("confidence",0.)),
                     "sleeping_yolo_score":float(sleep_det.get("confidence",0.)),"resolved_behavior":"using_phone","phone_independently_associated":True})
-            else:
+            elif det.get("evidence",{}).get("sleeping_phone_conflict") or float(candidate.get("confidence",0.))>=float(sleep_det.get("confidence",0.)):
                 for d in (sleep,det):_set_decision(d,"suspected","LABEL_CONFLICT_UNRESOLVED",missing=["independent_behavior_specific_evidence"],extra={
                     "reason_code":"LABEL_CONFLICT_UNRESOLVED","sleeping_yolo_score":float(sleep_det.get("confidence",0.)),"using_phone_yolo_score":float(candidate.get("confidence",0.))})
+            else:
+                _set_decision(det,"suspected","LABEL_CONFLICT_SLEEPING_DOMINATES_UNCONFIRMED_PHONE",missing=["coco_cell_phone_object"],extra={
+                    "reason_code":"LABEL_CONFLICT_SLEEPING_DOMINATES_UNCONFIRMED_PHONE","sleeping_yolo_score":float(sleep_det.get("confidence",0.)),"using_phone_yolo_score":float(candidate.get("confidence",0.))})
     # Recompute eating with a face mouth point, then a pose-derived mouth proxy;
     # proxy evidence remains suspected. Last fallback is a tight head-region center.
     food_owner={x.get("food_detection_id"):x.get("person_detection_id") for x in object_evidence.get("food_person_associations",[])}

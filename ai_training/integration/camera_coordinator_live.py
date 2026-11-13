@@ -1,4 +1,4 @@
-﻿import queue
+import queue
 import json
 import os
 import tempfile
@@ -73,7 +73,7 @@ def ai_loop(frame_queue, result_queue, stop_event, max_observations=_FROM_ENVIRO
     )
     duration_tracker = BehaviorDurationTracker(
         max_gap=5.0,
-        anchor_sleeping_identity=(os.environ.get("HTTM_ANCHOR_SLEEPING_IDENTITY") == "1"),
+        anchor_sleeping_identity=(os.environ.get("HTTM_ANCHOR_SLEEPING_IDENTITY", "1") != "0"),
     )
     warning_observer = BehaviorWarningObserver(WARNING_CONFIG)
     visualization_enabled = visual_enabled()
@@ -84,7 +84,7 @@ def ai_loop(frame_queue, result_queue, stop_event, max_observations=_FROM_ENVIRO
         tracker = FaceTracker(
             iou_threshold=0.3,
             max_age=face_tracker_max_age_from_environment(),
-            motion_matching=(os.environ.get("HTTM_FACE_MOTION_MATCHING") == "1"),
+            motion_matching=(os.environ.get("HTTM_FACE_MOTION_MATCHING", "1") != "0"),
         )
         diagnostics = PersonTrackerDiagnostics(DiagnosticConfig.from_environment(ROOT))
         # Diagnostic limits remain bounded; they do not terminate continuous AI.
@@ -230,7 +230,7 @@ def ai_loop(frame_queue, result_queue, stop_event, max_observations=_FROM_ENVIRO
                 matches = associate_v4(
                     face_tracks,
                     hybrid_result["people"],
-                    adaptive_close_up=(os.environ.get("HTTM_ADAPTIVE_ASSOCIATION") == "1"),
+                    adaptive_close_up=(os.environ.get("HTTM_ADAPTIVE_ASSOCIATION", "1") != "0"),
                 )
 
                 person_updated_at = time.perf_counter()
