@@ -1,11 +1,11 @@
+"""Camera Live runner preserving HTTM camera connection protocol with AI-Smart core."""
+
 import queue
-import json
-import os
+import sys
 import tempfile
 import threading
 import time
 from itertools import count
-from concurrent.futures import ThreadPoolExecutor
 from pathlib import Path
 
 import cv2
@@ -16,101 +16,50 @@ from camera_coordinator import (
     CAMERA_INDEX,
     WORKER_TIMEOUT,
 )
-from camera_live_runtime import (LiveWorker as Worker, WorkerStopped, RESULT_QUEUE_SIZE,
-                                 SHUTDOWN_TIMEOUT, observation_limit_from_environment, publish_latest)
-from person_face_association_v4 import associate_v4
-from person_tracker import PersonTracker
-from behavior_duration import BEHAVIORS, BehaviorDurationTracker, behavior_label, duration_text
-from behavior_overlay import AISnapshot
-from behavior_warning import DEFAULT_WARNING_CONFIG, BehaviorWarningObserver
-from person_tracker_diagnostics import DiagnosticConfig, PersonTrackerDiagnostics
-from identity_continuity_diagnostics import shadow_from_environment
-from person_snapshot_overlay import overlay_from_environment
-from bbox_visual_metadata import enabled as visual_enabled, attach_to_result
+from camera_live_runtime import (
+    LiveWorker as Worker,
+    WorkerStopped,
+    RESULT_QUEUE_SIZE,
+    SHUTDOWN_TIMEOUT,
+    observation_limit_from_environment,
+    publish_latest,
+)
 from live_bbox_overlay import AI_TARGET_FPS, FrameRateMeter, InferencePacer, draw_live_bboxes
-import sys
-
-sys.path.insert(0, str(ROOT / "ai_training" / "recognition"))
-from face_tracker import FaceTracker
 
 
 MAX_AI_FRAMES = None  # No default session limit; tests may inject a bounded run.
 _FROM_ENVIRONMENT = object()
-PERSON_TRACK_MAX_AGE = 5.0  # Observed AI interval up to 3.7s plus bounded margin.
+PERSON_TRACK_MAX_AGE = 5.0
 RESULT_TTL = 0.6
 WINDOW_NAME = "HTTM Camera Live"
 VIEW_WIDTH = 1280
 LIVE_VIEW_WIDTH = 896  # 70%; the monitoring panel uses the remaining 30%.
 LIVE_HEADER_HEIGHT = 48
-# No CLI/environment switch: production alerts stay disabled for all behaviors.
-WARNING_CONFIG = DEFAULT_WARNING_CONFIG
+
+BEHAVIOR_NAMES = (
+    "Using Phone",
+    "Eating",
+    "Sleeping",
+)
 
 
-def face_tracker_max_age_from_environment():
-    """Camera Live only: unset keeps baseline; only literal '4.0' opts in."""
-    value = os.environ.get("HTTM_FACE_TRACKER_TRIAL_MAX_AGE")
-    if value is None:
-        return 2.0
-    if value == "4.0":
-        return 4.0
-    raise ValueError(
-        f"Invalid HTTM_FACE_TRACKER_TRIAL_MAX_AGE={value!r}: "
-        "only '4.0' is approved for the camera trial; "
-        "unset the variable for baseline max_age=2.0s."
-    )
+def _worker_python():
+    hybrid_python = ROOT / ".venv-hybrid/Scripts/python.exe"
+    return hybrid_python if hybrid_python.is_file() else Path(sys.executable)
 
 
 def ai_loop(frame_queue, result_queue, stop_event, max_observations=_FROM_ENVIRONMENT):
-    face_worker = None
-    hybrid_worker = None
-    identity_shadow = None
-    inference_pool = None
-    person_tracker = PersonTracker(
-        iou_threshold=0.3,
-        max_age=PERSON_TRACK_MAX_AGE,
-        keep_unmatched=True,
-        motion_matching=True,
-    )
-    duration_tracker = BehaviorDurationTracker(
-        max_gap=5.0,
-        anchor_sleeping_identity=(os.environ.get("HTTM_ANCHOR_SLEEPING_IDENTITY", "1") != "0"),
-    )
-    warning_observer = BehaviorWarningObserver(WARNING_CONFIG)
-    visualization_enabled = visual_enabled()
+    ai_worker = None
 
     try:
         if max_observations is _FROM_ENVIRONMENT:
             max_observations = observation_limit_from_environment(MAX_AI_FRAMES)
-        tracker = FaceTracker(
-            iou_threshold=0.3,
-            max_age=face_tracker_max_age_from_environment(),
-            motion_matching=(os.environ.get("HTTM_FACE_MOTION_MATCHING", "1") != "0"),
-        )
-        diagnostics = PersonTrackerDiagnostics(DiagnosticConfig.from_environment(ROOT))
-        # Diagnostic limits remain bounded; they do not terminate continuous AI.
-        shadow_budget = 10 if max_observations is None else max_observations
-        identity_shadow = shadow_from_environment(ROOT, person_tracker, shadow_budget)
-        # Choose once: disabled debug calls the original bound method directly.
-        update_faces = tracker.update
-        face_debug_before = None
-        if diagnostics.active and diagnostics.config.face_enabled:
-            def update_faces(detections, timestamp):
-                nonlocal face_debug_before
-                face_debug_before = diagnostics.before_face_update(tracker, timestamp)
-                return tracker.update(detections, timestamp)
 
-        face_worker = Worker(
-            ROOT / ".venv/Scripts/python.exe",
-            INTEGRATION / "face_id_stream_worker.py",
+        ai_worker = Worker(
+            _worker_python(),
+            INTEGRATION / "smart_classroom_stream_worker.py",
         )
-        face_worker.stop_event = stop_event
-
-        hybrid_worker = Worker(
-            ROOT / ".venv-hybrid/Scripts/python.exe",
-            INTEGRATION / "hybrid_v7_stream_worker.py",
-        )
-        hybrid_worker.stop_event = stop_event
-        inference_pool = ThreadPoolExecutor(max_workers=2, thread_name_prefix="live-inference")
+        ai_worker.stop_event = stop_event
 
         with tempfile.TemporaryDirectory(
             prefix="httm_live_"
@@ -121,14 +70,10 @@ def ai_loop(frame_queue, result_queue, stop_event, max_observations=_FROM_ENVIRO
             completed = 0
             pacer = InferencePacer(AI_TARGET_FPS)
             while not stop_event.is_set() and (max_observations is None or completed < max_observations):
-                # Pace only this worker. Fetch AFTER waiting so the mailbox
-                # supplies the latest camera frame, not an image held during sleep.
                 if pacer.wait(stop_event, time.perf_counter()):
                     break
                 try:
-                    captured_at, frame = frame_queue.get(
-                        timeout=1
-                    )
+                    captured_at, frame = frame_queue.get(timeout=1)
                 except queue.Empty:
                     if stop_event.is_set():
                         break
@@ -136,7 +81,6 @@ def ai_loop(frame_queue, result_queue, stop_event, max_observations=_FROM_ENVIRO
 
                 if stop_event.is_set():
                     break
-                # Empty polling consumes no ID and no observation budget.
                 pacer.started(time.perf_counter())
                 frame_id = next(frame_ids)
 
@@ -144,177 +88,34 @@ def ai_loop(frame_queue, result_queue, stop_event, max_observations=_FROM_ENVIRO
                     raise RuntimeError("Cannot save temporary frame")
 
                 started = time.perf_counter()
-                # Both workers read this JPEG. Retain its decoded pixels before
-                # the next iteration overwrites the path; never reload it in UI.
-                snapshot_image = cv2.imread(str(image_path))
-                if snapshot_image is None:
-                    raise RuntimeError("Cannot decode AI snapshot")
-
-                # One request per worker; both read the SAME immutable JPEG.
-                # Join both before the next iteration can overwrite that file.
-                def timed_inference(worker):
-                    worker_started = time.perf_counter()
-                    reply = worker.process_frame(image_path, frame_id)
-                    return reply, time.perf_counter() - worker_started
-
-                face_future = inference_pool.submit(timed_inference, face_worker)
-                hybrid_future = inference_pool.submit(timed_inference, hybrid_worker)
-                try:
-                    face_result, face_time = face_future.result()
-                    hybrid_result, hybrid_time = hybrid_future.result()
-                except BaseException:
-                    stop_event.set()
-                    # Drain both calls before temporary files/resources close.
-                    for future in (face_future, hybrid_future):
-                        try:
-                            future.result()
-                        except BaseException:
-                            pass
-                    raise
+                ai_result = ai_worker.process_frame(image_path, frame_id)
                 if stop_event.is_set():
                     break
 
-                detections = [
-                    (
-                        tuple(face["face_bbox"]),
-                        face["student_id"],
-                        face["score"],
-                    )
-                    for face in face_result["faces"]
-                ]
-
-                tracked_faces = update_faces(
-                    detections,
-                    time.perf_counter(),
-                )
-
-                # Preserve current recognition separately from stable identity.
-                # Match tracking output to detections by bbox only when unique.
-                current_faces = {}
-                bbox_counts = {}
-
-                for face in face_result["faces"]:
-                    key = tuple(face["face_bbox"])
-                    bbox_counts[key] = bbox_counts.get(key, 0) + 1
-                    current_faces[key] = face
-
-                face_tracks = []
-                identity_details = {}
-
-                for track_id, bbox, stable_label, score in tracked_faces:
-                    key = tuple(bbox)
-
-                    if bbox_counts.get(key, 0) == 1:
-                        current_face = current_faces[key]
-                        current_id = current_face["student_id"]
-                        current_score = current_face["score"]
-                    else:
-                        current_id = "Unknown"
-                        current_score = None
-
-                    identity_details[track_id] = {
-                        "track_id": track_id,
-                        "stable_identity": stable_label,
-                        "current_face_id": current_id,
-                        "current_face_score": current_score,
-                    }
-
-                    face_tracks.append(
-                        (
-                            track_id,
-                            bbox,
-                            current_id,
-                            score,
-                        )
-                    )
-                matches = associate_v4(
-                    face_tracks,
-                    hybrid_result["people"],
-                    adaptive_close_up=(os.environ.get("HTTM_ADAPTIVE_ASSOCIATION", "1") != "0"),
-                )
-
-                person_updated_at = time.perf_counter()
-                debug_before = (diagnostics.before_update(person_tracker, person_updated_at)
-                                if diagnostics.active else None)
-                shadow_before = identity_shadow.before_update(person_tracker) if identity_shadow is not None else None
-                tracked_people = person_tracker.update(
-                    hybrid_result["people"],
-                    person_updated_at,
-                )
-
-                print(
-                    "[PERSON TRACKING] " + json.dumps({
-                        "frame_id": frame_id,
-                        "updated_at": person_updated_at,
-                        "tracked_people": tracked_people,
-                    }),
-                    flush=True,
-                )
-
-                person_track_map = {
-                    person["person_ref"]: person["track_id"]
-                    for person in tracked_people
-                }
-
-                for match in matches:
-                    match["person_track_id"] = person_track_map.get(
-                        match["person_ref"]
-                    )
-
-                shadow_frame = (identity_shadow.analyze(
-                    frame_id, captured_at, person_updated_at, shadow_before,
-                    tracked_people, face_result["faces"], matches,
-                ) if identity_shadow is not None else None)
-
-                behavior_frame = duration_tracker.update(
-                    frame_id, captured_at, hybrid_result["people"],
-                    tracked_people, matches,
-                )
-                snapshot = AISnapshot(frame_id, captured_at, behavior_frame, snapshot_image)
-                warning_frame = warning_observer.update(
-                    behavior_frame, matches, observed_at=time.perf_counter(),
-                )
-                elapsed = time.perf_counter() - started
+                completed_at = time.perf_counter()
+                elapsed = completed_at - started
+                objects = list(ai_result.get("objects") or ())
+                behaviors = list(ai_result.get("behaviors") or ())
+                occupancy = int(ai_result.get("occupancy", ai_result.get("person_count", 0)))
 
                 result = {
                     "frame_id": frame_id,
                     "captured_at": captured_at,
-                    "completed_at": time.perf_counter(),
-                    "face_count": face_result["face_count"],
-                    "person_count": hybrid_result["person_count"],
-                    "inference_runtime": hybrid_result.get("inference_runtime"),
-                    "face_runtime": face_result.get("inference_runtime"),
-                    "matches": matches,
-                    "tracked_people": tracked_people,
-                    "tracked_faces": tracked_faces,
-                    "identity_details": identity_details,
-                    "behavior_frame": behavior_frame,
-                    "warning_frame": warning_frame,
-                    "snapshot": snapshot,
+                    "completed_at": completed_at,
+                    "occupancy": occupancy,
+                    "person_count": occupancy,
+                    "objects": objects,
+                    "behaviors": behaviors,
+                    "inference_runtime": ai_result.get("inference_runtime"),
                     "source_size": (frame.shape[1], frame.shape[0]),
-                    "face_time": face_time,
-                    "hybrid_time": hybrid_time,
+                    "object_time": float(ai_result.get("object_inference_time_ms", 0.0)) / 1000.0,
+                    "behavior_time": float(ai_result.get("behavior_inference_time_ms", 0.0)) / 1000.0,
+                    "inference_time_ms": float(ai_result.get("inference_time_ms", elapsed * 1000.0)),
                     "elapsed": elapsed,
                 }
 
-                if visualization_enabled:
-                    try:
-                        attach_to_result(result, image_path, face_result, tracked_faces)
-                    except Exception as exc:
-                        print(f"[PERSON SNAPSHOT OVERLAY] metadata disabled after error; AI continues; "
-                              f"{type(exc).__name__}: {exc}", file=sys.stderr, flush=True)
-                        visualization_enabled = False
                 publish_latest(result_queue, result)
                 completed += 1
-                if identity_shadow is not None:
-                    identity_shadow.record(shadow_frame, result=result, raw_people=hybrid_result["people"],
-                                           duration_max_gap=duration_tracker.max_gap)
-                if debug_before is not None:
-                    diagnostics.record(
-                        debug_before, person_tracker, hybrid_result["people"], result, image_path,
-                        face_context=(face_debug_before, tracker, face_result["faces"])
-                        if face_debug_before is not None else None,
-                    )
 
     except WorkerStopped:
         pass
@@ -324,22 +125,18 @@ def ai_loop(frame_queue, result_queue, stop_event, max_observations=_FROM_ENVIRO
     finally:
         stop_event.set()
         cleanup_errors = []
-        for resource, method in ((face_worker, "close"), (hybrid_worker, "close"), (identity_shadow, "finish")):
-            if resource is not None:
-                try:
-                    getattr(resource, method)()
-                except Exception as exc:
-                    cleanup_errors.append(f"{method}: {type(exc).__name__}: {exc}")
-        if inference_pool is not None:
-            inference_pool.shutdown(wait=True, cancel_futures=True)
+        if ai_worker is not None:
+            try:
+                ai_worker.close()
+            except Exception as exc:
+                cleanup_errors.append(f"close: {type(exc).__name__}: {exc}")
         if cleanup_errors:
             publish_latest(result_queue, {"error": "AI cleanup failed: " + "; ".join(cleanup_errors)})
         publish_latest(result_queue, {"finished": True})
 
 
-
 def _wrap_panel_text(text, width, scale):
-    """Wrap by actual font width, retaining long IDs instead of truncating them."""
+    """Wrap by actual font width, retaining long labels instead of truncating them."""
     lines = []
     text = str(text)
     while text:
@@ -361,122 +158,166 @@ def _wrap_panel_text(text, width, scale):
 
 
 def draw_ai_panel(frame, result, page=0, now=None):
-    """Compose an aspect-correct live view (70%) and historical AI panel (30%)."""
+    """Compose an aspect-correct live view (70%) and AI-Smart monitoring panel (30%)."""
     import numpy as np
 
     now = time.perf_counter() if now is None else now
     panel_width = VIEW_WIDTH - LIVE_VIEW_WIDTH
     normal, muted, accent = (230, 230, 230), (180, 180, 180), (0, 220, 255)
+
+    stale = True
     status = "Waiting for AI..."
     if result is not None:
-        status = ("STALE - no new AI result" if now - result.get("completed_at", result["captured_at"])
-                  > PERSON_TRACK_MAX_AGE else "Latest completed AI observation")
-    observation = result.get("behavior_frame") if result is not None else None
-    people = observation.people if observation is not None else ()
-    person = people[page % len(people)] if people else None
-    face_id = person.face_track_id if person is not None else None
-    if isinstance(face_id, int):
-        face_id = f"T{face_id}"
+        stale = now - result.get("completed_at", result["captured_at"]) > PERSON_TRACK_MAX_AGE
+        status = "STALE - no new AI result" if stale else "Latest completed AI observation"
+
+    objects = list(result.get("objects") or ()) if result is not None else []
+    behaviors = list(result.get("behaviors") or ()) if result is not None else []
+    occupancy = result.get("occupancy", result.get("person_count", 0)) if result is not None else None
+
+    behavior_counts = {name: 0 for name in BEHAVIOR_NAMES}
+    for beh in behaviors:
+        name = beh.get("class_name")
+        if name in behavior_counts:
+            behavior_counts[name] += 1
+
+    items = [("Behavior", b) for b in behaviors] + [("Object", o) for o in objects]
+    selected_item = items[page % len(items)] if items else None
+
     rows = [
-        ("AI MONITORING", accent, .62),
-        ("Historical AI result - not live", muted, .44),
-        (status, accent, .46),
-        (f"Frame: {result['frame_id']}" if result else "Frame: --", normal, .48),
-        (f"Result age: {max(0., now - result['captured_at']):.1f}s" if result else "Result age: --", normal, .48),
-        (f"Processing: {result['elapsed']:.2f}s" if result else "Processing: --", normal, .48),
-        (f"Faces: {result['face_count']} | People: {result['person_count']}" if result else "Faces: -- | People: --", normal, .48),
-        (f"Tracks: {len(people)} | Page {page % len(people) + 1 if people else 1}/{max(1, len(people))}", muted, .46),
-        (f"Student: {person.student_id or 'Unknown'}" if person else "Student: Unknown", accent, .48),
-        (f"Face Track: {face_id if face_id is not None else 'Unknown'}", normal, .48),
-        (f"Person Track: {person.person_track_id}" if person else "Person Track: Unknown", accent, .48),
-        (f"Association: {person.association_status}" if person else "Association: unavailable", normal, .46),
-        (f"Identity: {person.identity_status}" if person else "Identity: unavailable", muted, .46),
-        ("BEHAVIORS (~ estimated duration)", accent, .46),
+        ("AI-SMART MONITORING", accent, .58),
+        ("Core: yolov8n + behavior_yolo (3 cls)", muted, .43),
+        (status, accent, .45),
+        (f"Frame: {result['frame_id']}" if result else "Frame: --", normal, .47),
+        (f"Result age: {max(0., now - result['captured_at']):.1f}s" if result else "Result age: --", normal, .47),
+        (
+            f"Processing: {result['elapsed']:.2f}s ({result.get('inference_time_ms', 0.0):.0f}ms)"
+            if result else "Processing: --",
+            normal,
+            .46,
+        ),
+        (f"Occupancy (Persons): {occupancy}" if occupancy is not None else "Occupancy (Persons): --", accent, .48),
+        (f"Objects Detected: {len(objects)}" if result else "Objects Detected: --", normal, .47),
+        (f"Behaviors Detected: {len(behaviors)}" if result else "Behaviors Detected: --", normal, .47),
+        ("BEHAVIOR COUNTS (3 CLASSES)", accent, .46),
     ]
-    decisions = {behavior.name: behavior for behavior in person.behaviors} if person else {}
-    for name in BEHAVIORS:
-        behavior = decisions.get(name)
-        value = f"{behavior.state} {duration_text(behavior)}" if behavior else "unknown --"
-        rows.append((f"{behavior_label(name)}: {value}", normal, .46))
-    if observation is not None and not observation.timestamp_valid:
-        rows.append(("Capture time invalid; duration --", accent, .44))
 
-    # Frozen observer output only; repainting cannot advance an episode or emit.
-    alerts = result.get("warning_frame") if result is not None else None
-    if alerts is None or not alerts.enabled_behaviors:
-        rows.append(("Experimental alerts: disabled", muted, .44))
+    for name in BEHAVIOR_NAMES:
+        count_val = behavior_counts[name] if result is not None else "--"
+        rows.append((f"{name}: {count_val}", normal, .45))
+
+    rows.append(("DETECTION INSPECTOR", accent, .46))
+    if selected_item is not None:
+        kind, item = selected_item
+        idx = page % len(items)
+        bbox = [round(float(v)) for v in item.get("bbox", (0, 0, 0, 0))]
+        rows.append((f"Item {idx + 1}/{len(items)} [{kind}]", muted, .44))
+        rows.append((f"Class: {item.get('class_name', 'Unknown')} ({item.get('confidence', 0.0):.2f})", normal, .45))
+        rows.append((f"BBox: {bbox}", muted, .42))
     else:
-        rows.append(("Experimental alerts: test configuration", muted, .40))
-        fresh = alerts.is_fresh(now, result["frame_id"], result["captured_at"])
-        for alert in alerts.views:
-            if person is None or (alert.person_track_id, alert.student_id) != (person.person_track_id, person.student_id):
-                continue
-            if alert.behavior not in alerts.enabled_behaviors:
-                continue
-            if alert.state == "WARNING_EXPERIMENTAL":
-                rows.append(("WARNING (EXPERIMENTAL)" if fresh else "STALE experimental alert (historical)",
-                             (0, 100, 255) if fresh else muted, .46))
-                rows.append((f"{alert.student_id} | {alert.person_track_id} | {behavior_label(alert.behavior)}", accent, .42))
-                rows.append((f"Qualified ~{alert.qualified_seconds:.1f}s | Frame {alerts.frame_id}", normal, .42))
-                rows.append(("Not an official violation", muted, .44))
-            elif fresh:
-                rows.append((f"{behavior_label(alert.behavior)}: {alert.state} (~{alert.qualified_seconds:.1f}s)", muted, .40))
-            else:
-                rows.append(("Experimental observation: historical/stale", muted, .40))
+        rows.append(("Item 0/0: No detections", muted, .44))
 
-    wrapped = [(text, color, scale) for text, color, scale in rows
-               for text in _wrap_panel_text(text, panel_width - 36, scale)]
+    wrapped = [
+        (text, color, scale)
+        for text, color, scale in rows
+        for text in _wrap_panel_text(text, panel_width - 36, scale)
+    ]
     source_height, source_width = frame.shape[:2]
     live_height = max(1, round(source_height * LIVE_VIEW_WIDTH / source_width))
-    height = max(540, LIVE_HEADER_HEIGHT + live_height, 28 + len(wrapped) * 24 + 40)
+    height = max(540, LIVE_HEADER_HEIGHT + live_height, 28 + len(wrapped) * 23 + 40)
     panel = np.full((height, panel_width, 3), 35, dtype=np.uint8)
     for index, (text, color, scale) in enumerate(wrapped):
-        cv2.putText(panel, text, (18, 28 + index * 24), cv2.FONT_HERSHEY_SIMPLEX,
-                    scale, color, 1, cv2.LINE_AA)
-    cv2.putText(panel, "N/P: students | Q: Quit", (18, height - 16),
-                cv2.FONT_HERSHEY_SIMPLEX, .44, muted, 1, cv2.LINE_AA)
+        cv2.putText(
+            panel,
+            text,
+            (18, 28 + index * 23),
+            cv2.FONT_HERSHEY_SIMPLEX,
+            scale,
+            color,
+            1,
+            cv2.LINE_AA,
+        )
+    cv2.putText(
+        panel,
+        "N/P: items | I: live | Q: Quit",
+        (18, height - 16),
+        cv2.FONT_HERSHEY_SIMPLEX,
+        .44,
+        muted,
+        1,
+        cv2.LINE_AA,
+    )
+
+    preview_source = frame.copy()
+    if result is not None and not stale:
+        for obj in objects:
+            x1, y1, x2, y2 = [int(v) for v in obj["bbox"]]
+            color = (0, 255, 0) if str(obj["class_name"]).lower() == "person" else (255, 165, 0)
+            cv2.rectangle(preview_source, (x1, y1), (x2, y2), color, 2)
+            cv2.putText(
+                preview_source,
+                f"{obj['class_name']} {obj['confidence']:.2f}",
+                (x1, max(15, y1 - 6)),
+                cv2.FONT_HERSHEY_SIMPLEX,
+                0.5,
+                color,
+                2,
+            )
+        for beh in behaviors:
+            x1, y1, x2, y2 = [int(v) for v in beh["bbox"]]
+            color = (255, 0, 255)
+            cv2.rectangle(preview_source, (x1, y1), (x2, y2), color, 2)
+            cv2.putText(
+                preview_source,
+                f"BEH: {beh['class_name']} {beh['confidence']:.2f}",
+                (x1, max(25, y1 - 22)),
+                cv2.FONT_HERSHEY_SIMPLEX,
+                0.55,
+                color,
+                2,
+            )
 
     output = np.full((height, VIEW_WIDTH, 3), 24, dtype=np.uint8)
-    preview = cv2.resize(frame, (LIVE_VIEW_WIDTH, live_height),
-                         interpolation=cv2.INTER_AREA if LIVE_VIEW_WIDTH < source_width else cv2.INTER_LINEAR)
+    preview = cv2.resize(
+        preview_source,
+        (LIVE_VIEW_WIDTH, live_height),
+        interpolation=cv2.INTER_AREA if LIVE_VIEW_WIDTH < source_width else cv2.INTER_LINEAR,
+    )
     top = LIVE_HEADER_HEIGHT + (height - LIVE_HEADER_HEIGHT - live_height) // 2
     output[top:top + live_height, :LIVE_VIEW_WIDTH] = preview
     output[:, LIVE_VIEW_WIDTH:] = panel
-    cv2.putText(output, "LIVE CAMERA", (16, 30), cv2.FONT_HERSHEY_SIMPLEX,
-                .65, (230, 230, 230), 1, cv2.LINE_AA)
+    cv2.putText(
+        output,
+        "LIVE CAMERA",
+        (16, 30),
+        cv2.FONT_HERSHEY_SIMPLEX,
+        .65,
+        (230, 230, 230),
+        1,
+        cv2.LINE_AA,
+    )
     return output
+
 
 def main(*, show_diagnostics=False):
     max_observations = observation_limit_from_environment(MAX_AI_FRAMES)
-    # Reject invalid trial settings before camera/model/GUI resources are opened.
-    face_max_age = face_tracker_max_age_from_environment()
-    if face_max_age == 4.0:
-        print("[FACE TRACKER TRIAL] max_age=4.0s enabled for this Camera Live session; "
-              "production default remains 2.0s.", flush=True)
 
-    for path in (
-        ROOT / ".venv/Scripts/python.exe",
-        ROOT / ".venv-hybrid/Scripts/python.exe",
-        INTEGRATION / "face_id_stream_worker.py",
-        INTEGRATION / "hybrid_v7_stream_worker.py",
-    ):
+    worker_python = _worker_python()
+    worker_script = INTEGRATION / "smart_classroom_stream_worker.py"
+    for path in (worker_python, worker_script):
         if not path.is_file():
             raise FileNotFoundError(path)
 
-    try:
-        person_overlay = overlay_from_environment(stale_after=PERSON_TRACK_MAX_AGE)
-    except Exception as exc:
-        print(f"[PERSON SNAPSHOT OVERLAY] initialization failed; disabled; AI continues; "
-              f"{type(exc).__name__}: {exc}", file=sys.stderr, flush=True)
-        person_overlay = None
     mode = "continuous; Q to stop" if max_observations is None else f"limited to {max_observations} AI observations"
     print(f"[CAMERA LIVE] {mode}", flush=True)
 
     for backend_name, backend in (("DSHOW", cv2.CAP_DSHOW), ("MSMF", cv2.CAP_MSMF)):
         cap = cv2.VideoCapture(CAMERA_INDEX, backend)
         if cap.isOpened():
-            print(f"[CAMERA] Opened camera index {CAMERA_INDEX} with backend {backend_name}",
-                  flush=True)
+            print(
+                f"[CAMERA] Opened camera index {CAMERA_INDEX} with backend {backend_name}",
+                flush=True,
+            )
             break
         cap.release()
     else:
@@ -495,7 +336,7 @@ def main(*, show_diagnostics=False):
     latest_result = None
     window_sized = False
     camera_rate, ai_rate = FrameRateMeter(), FrameRateMeter()
-    person_page = 0
+    item_page = 0
     completed = 0
     error = None
     finished = False
@@ -521,9 +362,7 @@ def main(*, show_diagnostics=False):
                         pass
 
                 try:
-                    frame_queue.put_nowait(
-                        (captured_at, frame.copy())
-                    )
+                    frame_queue.put_nowait((captured_at, frame.copy()))
                 except queue.Full:
                     pass
 
@@ -547,42 +386,37 @@ def main(*, show_diagnostics=False):
 
                     print(
                         f"Frame {result['frame_id']}: "
-                        f"faces={result['face_count']}, "
-                        f"people={result['person_count']}, "
-                        f"matched={len(result['matches'])}, "
-                        f"face={result['face_time']:.2f}s, "
-                        f"hybrid={result['hybrid_time']:.2f}s, "
+                        f"occupancy={result['occupancy']}, "
+                        f"objects={len(result['objects'])}, "
+                        f"behaviors={len(result['behaviors'])}, "
+                        f"inference={result['inference_time_ms']:.1f}ms, "
                         f"total={result['elapsed']:.2f}s, "
-                        f"result_age="
-                        f"{result['completed_at'] - result['captured_at']:.2f}s",
+                        f"result_age={result['completed_at'] - result['captured_at']:.2f}s",
                         flush=True,
                     )
 
             if show_diagnostics:
-                frame = draw_ai_panel(frame, latest_result, page=person_page)
+                frame = draw_ai_panel(frame, latest_result, page=item_page)
             else:
                 display_now = time.perf_counter()
                 frame = draw_live_bboxes(
-                    frame, latest_result, now=display_now,
-                    camera_fps=camera_rate.fps(display_now), ai_fps=ai_rate.fps(display_now),
+                    frame,
+                    latest_result,
+                    now=display_now,
+                    camera_fps=camera_rate.fps(display_now),
+                    ai_fps=ai_rate.fps(display_now),
                     view_width=VIEW_WIDTH,
                 )
             if not window_sized:
                 window_scale = min(1., 720 / frame.shape[0])
-                cv2.resizeWindow(WINDOW_NAME, round(frame.shape[1] * window_scale),
-                                 round(frame.shape[0] * window_scale))
+                cv2.resizeWindow(
+                    WINDOW_NAME,
+                    round(frame.shape[1] * window_scale),
+                    round(frame.shape[0] * window_scale),
+                )
                 window_sized = True
 
             cv2.imshow(WINDOW_NAME, frame)
-
-            if person_overlay is not None:
-                try:
-                    person_overlay.show(latest_result, now=time.perf_counter())
-                except Exception as exc:
-                    # Last-resort boundary for the optional visualization only.
-                    print(f"[PERSON SNAPSHOT OVERLAY] disabled after display error; live continues; "
-                          f"{type(exc).__name__}: {exc}", flush=True)
-                    person_overlay = None
 
             key = cv2.waitKey(1) & 0xFF
             if key == ord("q"):
@@ -592,9 +426,9 @@ def main(*, show_diagnostics=False):
                 show_diagnostics = not show_diagnostics
                 window_sized = False
             if key == ord("n"):
-                person_page += 1
+                item_page += 1
             elif key == ord("p"):
-                person_page -= 1
+                item_page -= 1
 
             if error is not None or finished:
                 break
@@ -612,8 +446,6 @@ def main(*, show_diagnostics=False):
                     worker.join(timeout=SHUTDOWN_TIMEOUT)
                 if worker.is_alive():
                     raise RuntimeError("AI worker did not finish cleanup within shutdown timeout")
-                # Q can arrive before the AI thread reports a cleanup error.
-                # Inspect terminal controls after joining; do not render new data.
                 while True:
                     try:
                         pending = result_queue.get_nowait()
@@ -630,10 +462,3 @@ def main(*, show_diagnostics=False):
 
 if __name__ == "__main__":
     main()
-
-
-
-
-
-
-

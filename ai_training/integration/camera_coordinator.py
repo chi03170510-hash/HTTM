@@ -5,16 +5,12 @@ import sys
 import tempfile
 import threading
 import time
-from concurrent.futures import ThreadPoolExecutor
 from pathlib import Path
 
 import cv2
 
 INTEGRATION = Path(__file__).resolve().parent
 ROOT = INTEGRATION.parents[1]
-
-sys.path.insert(0, str(INTEGRATION))
-from person_face_association_v4 import associate_v4
 
 CAMERA_INDEX = 0
 MAX_FRAMES = 10
@@ -102,33 +98,28 @@ class Worker:
             self.process.stdout.close()
 
 
-def main():
-    face_python = ROOT / ".venv/Scripts/python.exe"
+def _worker_python():
     hybrid_python = ROOT / ".venv-hybrid/Scripts/python.exe"
+    return hybrid_python if hybrid_python.is_file() else Path(sys.executable)
 
-    face_script = INTEGRATION / "face_id_stream_worker.py"
-    hybrid_script = INTEGRATION / "hybrid_v7_stream_worker.py"
 
-    for path in (
-        face_python,
-        hybrid_python,
-        face_script,
-        hybrid_script,
-    ):
+def main():
+    ai_python = _worker_python()
+    ai_script = INTEGRATION / "smart_classroom_stream_worker.py"
+
+    for path in (ai_python, ai_script):
         if not path.is_file():
             raise FileNotFoundError(path)
 
     cap = cv2.VideoCapture(CAMERA_INDEX, cv2.CAP_DSHOW)
 
     if not cap.isOpened():
-        raise RuntimeError("Cannot open iVCam camera")
+        raise RuntimeError(f"Cannot open camera index {CAMERA_INDEX}")
 
-    face_worker = None
-    hybrid_worker = None
+    ai_worker = None
 
     try:
-        face_worker = Worker(face_python, face_script)
-        hybrid_worker = Worker(hybrid_python, hybrid_script)
+        ai_worker = Worker(ai_python, ai_script)
 
         with tempfile.TemporaryDirectory(
             prefix="httm_camera_"
@@ -145,70 +136,44 @@ def main():
                     raise RuntimeError("Cannot write frame")
 
                 start = time.perf_counter()
+                ai_result = ai_worker.process_frame(image_path, frame_id)
+                elapsed = time.perf_counter() - start
 
-                def _run_timed(worker):
-                    t0 = time.perf_counter()
-                    res = worker.process_frame(image_path, frame_id)
-                    return res, time.perf_counter() - t0
+                objects = ai_result.get("objects") or []
+                behaviors = ai_result.get("behaviors") or []
+                occupancy = int(ai_result.get("occupancy", 0))
 
-                with ThreadPoolExecutor(max_workers=2) as pool:
-                    fut_face = pool.submit(_run_timed, face_worker)
-                    fut_hybrid = pool.submit(_run_timed, hybrid_worker)
-                    face_result, face_time = fut_face.result()
-                    hybrid_result, hybrid_time = fut_hybrid.result()
-
-                face_tracks = [
-                    (
-                        f"frame_{frame_id}_face_{i}",
-                        item["face_bbox"],
-                        item["student_id"],
-                        item["score"],
-                    )
-                    for i, item in enumerate(
-                        face_result["faces"]
-                    )
-                ]
-
-                matches = associate_v4(
-                    face_tracks,
-                    hybrid_result["people"],
-                    adaptive_close_up=True,
-                )
-
-                for match in matches:
-                    box = match["person_bbox"]
-
-                    x1, y1, x2, y2 = map(int, box)
-
-                    cv2.rectangle(
-                        frame,
-                        (x1, y1),
-                        (x2, y2),
-                        (0, 255, 0),
-                        2,
-                    )
-
-                    label = (
-                        f"{match['student_id']} "
-                        f"({match['association_status']})"
-                    )
-
+                for obj in objects:
+                    x1, y1, x2, y2 = [int(v) for v in obj["bbox"]]
+                    color = (0, 255, 0) if str(obj["class_name"]).lower() == "person" else (255, 165, 0)
+                    cv2.rectangle(frame, (x1, y1), (x2, y2), color, 2)
                     cv2.putText(
                         frame,
-                        label,
-                        (x1, max(20, y1 - 10)),
+                        f"{obj['class_name']} {obj['confidence']:.2f}",
+                        (x1, max(15, y1 - 8)),
                         cv2.FONT_HERSHEY_SIMPLEX,
                         0.5,
-                        (0, 255, 0),
+                        color,
                         2,
                     )
 
-                elapsed = time.perf_counter() - start
+                for beh in behaviors:
+                    x1, y1, x2, y2 = [int(v) for v in beh["bbox"]]
+                    color = (255, 0, 255)
+                    cv2.rectangle(frame, (x1, y1), (x2, y2), color, 2)
+                    cv2.putText(
+                        frame,
+                        f"BEH: {beh['class_name']} {beh['confidence']:.2f}",
+                        (x1, max(25, y1 - 25)),
+                        cv2.FONT_HERSHEY_SIMPLEX,
+                        0.6,
+                        color,
+                        2,
+                    )
 
                 cv2.putText(
                     frame,
-                    f"Frame {frame_id}/{MAX_FRAMES} "
-                    f"| {elapsed:.1f}s",
+                    f"Frame {frame_id}/{MAX_FRAMES} | Occupancy: {occupancy} | {elapsed:.2f}s",
                     (10, 25),
                     cv2.FONT_HERSHEY_SIMPLEX,
                     0.6,
@@ -220,11 +185,10 @@ def main():
 
                 print(
                     f"Frame {frame_id}: "
-                    f"faces={face_result['face_count']}, "
-                    f"people={hybrid_result['person_count']}, "
-                    f"matched={len(matches)}, "
-                    f"face={face_time:.2f}s, "
-                    f"hybrid={hybrid_time:.2f}s, "
+                    f"occupancy={occupancy}, "
+                    f"objects={len(objects)}, "
+                    f"behaviors={len(behaviors)}, "
+                    f"inference={ai_result.get('inference_time_ms', 0.0):.1f}ms, "
                     f"total={elapsed:.2f}s",
                     flush=True,
                 )
@@ -236,13 +200,9 @@ def main():
         cap.release()
         cv2.destroyAllWindows()
 
-        if face_worker is not None:
-            face_worker.close()
-
-        if hybrid_worker is not None:
-            hybrid_worker.close()
+        if ai_worker is not None:
+            ai_worker.close()
 
 
 if __name__ == "__main__":
     main()
-
