@@ -26,10 +26,11 @@ reports/generated/
 *.avi
 *.mkv
 
-# Keep only the two approved behavior checkpoints as tracked model files.
+# Keep only the approved behavior checkpoints as tracked model files.
 models/*.pt
 !models/best_behavior_v2.pt
 !models/best_behavior_v1_4.pt
+!models/best_behavior_v3.pt
 models/detection/
 models/pretrained_person/*.pt
 !models/pretrained_person/yolo11n_coco.pt

@@ -1,6 +1,18 @@
 {
   "assets": [
     {
+      "path": "best_behavior_v3.pt",
+      "size_bytes": 5453658,
+      "sha256": "4e0944bc284071c8af433fd361604e85a436da4f016f29681373359b0dfc5542",
+      "role": "webcam_finetuned_behavior_detector_v3",
+      "architecture": "YOLO11n",
+      "task": "detect",
+      "class_mapping": {
+        "0": "sleeping",
+        "1": "using_phone"
+      }
+    },
+    {
       "path": "best_behavior_v2.pt",
       "size_bytes": 5473818,
       "sha256": "4c932dc472c4480d7b1910203a5f4c09782ace770bd8fb8b8f20e8b638e3861e",

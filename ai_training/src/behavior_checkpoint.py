@@ -6,7 +6,7 @@ from pathlib import Path
 
 CHECKPOINT_ENV = "HTTM_BEHAVIOR_CHECKPOINT"
 DEFAULT_CHECKPOINT = "best_behavior_v1_4.pt"
-APPROVED_CHECKPOINTS = (DEFAULT_CHECKPOINT, "best_behavior_v2.pt")
+APPROVED_CHECKPOINTS = (DEFAULT_CHECKPOINT, "best_behavior_v2.pt", "best_behavior_v3.pt")
 
 
 def behavior_checkpoint_path():

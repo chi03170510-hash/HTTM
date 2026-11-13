@@ -23,7 +23,7 @@ class TestBehaviorCheckpointSelection(unittest.TestCase):
         self.assertEqual(behavior_checkpoint_path(), BEHAVIOR_MODELS / "best_behavior_v1_4.pt")
 
     def test_explicit_v1_4_and_v2_rollback(self):
-        for name in ("best_behavior_v1_4.pt", "best_behavior_v2.pt"):
+        for name in ("best_behavior_v1_4.pt", "best_behavior_v2.pt", "best_behavior_v3.pt"):
             with self.subTest(name=name):
                 os.environ[CHECKPOINT_ENV] = name
                 model_dir = BEHAVIOR_MODELS if name == "best_behavior_v1_4.pt" else AI / "models"
@@ -57,7 +57,7 @@ class TestBehaviorCheckpointWorker(unittest.TestCase):
             os.environ.pop(name, None)
 
     def test_live_worker_loads_selected_checkpoint_and_preserves_settings(self):
-        for name in (None, "best_behavior_v2.pt"):
+        for name in (None, "best_behavior_v2.pt", "best_behavior_v3.pt"):
             with self.subTest(name=name):
                 if name is None:
                     os.environ.pop(CHECKPOINT_ENV, None)
