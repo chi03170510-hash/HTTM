@@ -111,12 +111,12 @@ class FaceFeatureExtractor:
         if self._backend == "solutions":
             result = mesh.process(rgb)
             if not result.multi_face_landmarks:
-                return {"ear_left":None,"ear_right":None,"eyes_valid":False,"mouth_open_ratio":None,"mouth_center_xy":None,"head_pose":head_pose([],w,h)}
+                return {"ear_left":None,"ear_right":None,"eyes_valid":False,"mouth_open_ratio":None,"mouth_center_xy":None,"yaw_asymmetry":None,"cheek_dz_ratio":None,"turn_direction":None,"head_pose":head_pose([],w,h)}
             lm = result.multi_face_landmarks[0].landmark
         else:
             result = mesh.detect(mp.Image(image_format=mp.ImageFormat.SRGB, data=rgb))
             if not result.face_landmarks:
-                return {"ear_left":None,"ear_right":None,"eyes_valid":False,"mouth_open_ratio":None,"mouth_center_xy":None,"head_pose":head_pose([],w,h)}
+                return {"ear_left":None,"ear_right":None,"eyes_valid":False,"mouth_open_ratio":None,"mouth_center_xy":None,"yaw_asymmetry":None,"cheek_dz_ratio":None,"turn_direction":None,"head_pose":head_pose([],w,h)}
             lm = result.face_landmarks[0]
         xy=lambda ids: [(lm[i].x*w,lm[i].y*h) for i in ids]
         left,right=eye_aspect_ratio(xy(LEFT_EYE)),eye_aspect_ratio(xy(RIGHT_EYE))
@@ -124,11 +124,19 @@ class FaceFeatureExtractor:
         mouth_width = _dist(xy((61,))[0],xy((291,))[0])
         mouth_open_ratio = _dist(xy((13,))[0],xy((14,))[0])/mouth_width if mouth_width > 1e-6 else None
         mouth_center_xy = [float((lm[13].x+lm[14].x)*.5*w), float((lm[13].y+lm[14].y)*.5*h)]
+        dl = abs(float(lm[454].x) - float(lm[1].x))
+        dr = abs(float(lm[1].x) - float(lm[234].x))
+        yaw_asymmetry = abs(dl - dr) / max(dl + dr, 1e-6)
+        cheek_span_x = max(abs(float(lm[454].x) - float(lm[234].x)), 1e-6)
+        cheek_dz_ratio = abs(float(getattr(lm[454], "z", 0.0)) - float(getattr(lm[234], "z", 0.0))) / cheek_span_x
+        turn_direction = "left" if dl < dr else "right"
         matrices = getattr(result, "facial_transformation_matrixes", None) if self._backend == "tasks" else None
         if matrices:
             pose = head_pose_from_transform(matrices[0])
         return {"ear_left":left,"ear_right":right,"eyes_valid":left is not None and right is not None,
-                "mouth_open_ratio":mouth_open_ratio,"mouth_center_xy":mouth_center_xy,"head_pose":pose}
+                "mouth_open_ratio":mouth_open_ratio,"mouth_center_xy":mouth_center_xy,
+                "yaw_asymmetry":yaw_asymmetry,"cheek_dz_ratio":cheek_dz_ratio,"turn_direction":turn_direction,
+                "head_pose":pose}
 
     def close(self):
         if self._mesh is not None and hasattr(self._mesh, "close"):

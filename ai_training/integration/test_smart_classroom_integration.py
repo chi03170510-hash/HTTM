@@ -57,13 +57,13 @@ class TestSmartClassroomCore(unittest.TestCase):
     def test_pipeline_loads_and_runs_with_3_classes(self):
         from src.smart_classroom_core import BEHAVIOR_CLASSES, UnifiedPipeline
 
-        expected_classes = {1: "Sleeping", 2: "Using Phone", 6: "Eating"}
+        expected_classes = {1: "Sleeping", 2: "Using Phone", 6: "Eating", 7: "Turning / Talking"}
         self.assertEqual(BEHAVIOR_CLASSES, expected_classes)
-        self.assertEqual(live.BEHAVIOR_NAMES, ("Using Phone", "Eating", "Sleeping"))
+        self.assertEqual(live.BEHAVIOR_NAMES, ("Using Phone", "Eating", "Sleeping", "Turning / Talking"))
 
         pipeline = UnifiedPipeline()
         self.assertEqual(pipeline.behavior_detector.behavior_classes, expected_classes)
-        self.assertEqual(len(BEHAVIOR_CLASSES), 3)
+        self.assertEqual(len(BEHAVIOR_CLASSES), 4)
 
         frame = np.zeros((480, 640, 3), dtype=np.uint8)
         result = pipeline.process_frame(frame, classroom_id="H305", annotate=True)
@@ -137,7 +137,7 @@ class TestLiveBBoxOverlay(unittest.TestCase):
 
 class TestCameraCoordinatorLive(unittest.TestCase):
     def test_ai_loop_processes_frames_and_shuts_down_cleanly(self):
-        self.assertEqual(live.BEHAVIOR_NAMES, ("Using Phone", "Eating", "Sleeping"))
+        self.assertEqual(live.BEHAVIOR_NAMES, ("Using Phone", "Eating", "Sleeping", "Turning / Talking"))
         fake_worker = Mock()
         fake_worker.process_frame.side_effect = [
             {

@@ -236,7 +236,7 @@ def draw_live_bboxes(frame, result, *, now, camera_fps=0.0, ai_fps=0.0,
     _text(canvas, device_text, (12, 65), (120, 235, 180), .50)
     _text(
         canvas,
-        "Q: Quit | I: diagnostics | AI-Smart Core (Using Phone, Eating, Sleeping)",
+        "Q: Quit | I: diagnostics | AI-Smart Core (Using Phone, Eating, Sleeping, Turning / Talking)",
         (12, 87),
         (200, 200, 200),
         .46,

@@ -71,10 +71,17 @@ PHONE_OBJECT_CLASSES = {
     "phone",
 }
 
+MODEL_BEHAVIOR_CLASSES = {
+    1: "Sleeping",
+    2: "Using Phone",
+    6: "Eating",
+}
+
 BEHAVIOR_CLASSES = {
     1: "Sleeping",
     2: "Using Phone",
     6: "Eating",
+    7: "Turning / Talking",
 }
 
 AUX_WEBCAM_BEHAVIOR_MAP = {
@@ -321,7 +328,7 @@ class ObjectDetector:
 
 
 class BehaviorDetector:
-    """Model 2 - Classroom Behavior Detection (Sleeping, Using Phone, Eating)."""
+    """Model 2 - Classroom Behavior Detection (Sleeping, Using Phone, Eating, Turning / Talking)."""
 
     def __init__(
         self,
@@ -334,10 +341,12 @@ class BehaviorDetector:
         self.imgsz = int(imgsz)
         self.device = select_default_device(device)
         self.behavior_classes = dict(BEHAVIOR_CLASSES)
+        self.model_behavior_classes = dict(MODEL_BEHAVIOR_CLASSES)
         self.model_path = Path(model_path) if model_path is not None else resolve_behavior_model_path()
         self.model = None
         self.aux_webcam_model = None
         self.face_extractor = None
+        self.pose_landmarker = None
         self.is_custom_model = False
         self._load_model()
         self._load_auxiliary_detectors()
@@ -354,13 +363,13 @@ class BehaviorDetector:
         actual_names = {int(k): str(v).strip() for k, v in name_items}
         mismatches = {
             cls_id: (expected_name, actual_names.get(cls_id))
-            for cls_id, expected_name in self.behavior_classes.items()
+            for cls_id, expected_name in self.model_behavior_classes.items()
             if actual_names.get(cls_id) != expected_name
         }
         if mismatches:
             raise RuntimeError(
                 f"Unexpected behavior model classes in {self.model_path}: "
-                f"expected subset {self.behavior_classes}, mismatches={mismatches}, actual={actual_names}"
+                f"expected subset {self.model_behavior_classes}, mismatches={mismatches}, actual={actual_names}"
             )
         self.is_custom_model = True
         logger.info("Behavior Detection Model loaded successfully (device=%s).", self.device)
@@ -390,6 +399,61 @@ class BehaviorDetector:
         except Exception as exc:
             logger.debug("FaceFeatureExtractor unavailable: %s", exc)
             self.face_extractor = None
+
+        try:
+            import mediapipe as mp
+            pose_path = AI_TRAINING_DIR / "models" / "pose_landmarker_full.task"
+            if hasattr(mp, "tasks") and hasattr(mp.tasks, "vision") and pose_path.is_file():
+                options = mp.tasks.vision.PoseLandmarkerOptions(
+                    base_options=mp.tasks.BaseOptions(model_asset_path=str(pose_path)),
+                    running_mode=mp.tasks.vision.RunningMode.IMAGE,
+                    num_poses=1,
+                    min_pose_detection_confidence=0.35,
+                    min_pose_presence_confidence=0.35,
+                )
+                self.pose_landmarker = mp.tasks.vision.PoseLandmarker.create_from_options(options)
+                logger.info("Loaded MediaPipe PoseLandmarker (%s).", pose_path)
+        except Exception as exc:
+            logger.debug("PoseLandmarker unavailable: %s", exc)
+            self.pose_landmarker = None
+
+    def _extract_person_pose_turn(self, frame: np.ndarray, person_bbox: list[float]) -> dict | None:
+        if self.pose_landmarker is None or frame is None or frame.size == 0:
+            return None
+        h, w = frame.shape[:2]
+        x1 = max(0, int(person_bbox[0]))
+        y1 = max(0, int(person_bbox[1]))
+        x2 = min(w, int(person_bbox[2]))
+        y2 = min(h, int(person_bbox[3]))
+        if x2 - x1 < 45 or y2 - y1 < 45:
+            return None
+        try:
+            import mediapipe as mp
+            crop = frame[y1:y2, x1:x2]
+            rgb = cv2.cvtColor(crop, cv2.COLOR_BGR2RGB)
+            res = self.pose_landmarker.detect(mp.Image(image_format=mp.ImageFormat.SRGB, data=rgb))
+            if not res.pose_landmarks:
+                return None
+            lm = res.pose_landmarks[0]
+            nose, le, re, ls, rs = lm[0], lm[7], lm[8], lm[11], lm[12]
+            edl = abs(float(le.x) - float(nose.x))
+            edr = abs(float(nose.x) - float(re.x))
+            ear_asym = abs(edl - edr) / max(edl + edr, 1e-6)
+            sh_mid_x = 0.5 * (float(ls.x) + float(rs.x))
+            sh_mid_y = 0.5 * (float(ls.y) + float(rs.y))
+            sh_w = max(abs(float(ls.x) - float(rs.x)), 1e-6)
+            nose_sh_offset = abs(float(nose.x) - sh_mid_x) / sh_w
+            sh_dz = abs(float(getattr(ls, "z", 0.0)) - float(getattr(rs, "z", 0.0))) / sh_w
+            turn_dir = "left" if float(nose.x) < sh_mid_x else "right"
+            return {
+                "ear_asym": ear_asym,
+                "nose_sh_offset": nose_sh_offset,
+                "sh_dz": sh_dz,
+                "turn_direction": turn_dir,
+                "nose_above_shoulders": float(nose.y) < (sh_mid_y - 0.04),
+            }
+        except Exception:
+            return None
 
     def _extract_person_face_features(self, frame: np.ndarray, person_bbox: list[float]) -> dict | None:
         if self.face_extractor is None or frame is None or frame.size == 0:
@@ -433,7 +497,7 @@ class BehaviorDetector:
             "conf": min(self.conf_thresh, 0.14),
             "imgsz": self.imgsz,
             "device": self.device,
-            "classes": sorted(self.behavior_classes.keys()),
+            "classes": sorted(self.model_behavior_classes.keys()),
             "verbose": False,
         }
         results = self.model.predict(frame, **predict_kwargs)
@@ -716,6 +780,71 @@ class BehaviorDetector:
                         "confidence": round(best_sleeping_conf, 4),
                         "bbox": list(p_box),
                     })
+                else:
+                    # --- 4. TURNING / TALKING CUES (class_id = 7) - Quay người sang trao đổi ---
+                    best_turning_conf = 0.0
+                    yaw_asym = 0.0
+                    cheek_dz = 0.0
+                    yaw_deg = 0.0
+                    mouth_open = 0.0
+
+                    if face_feat is not None:
+                        yaw_asym = float(face_feat.get("yaw_asymmetry") or 0.0)
+                        cheek_dz = float(face_feat.get("cheek_dz_ratio") or 0.0)
+                        mouth_open = float(face_feat.get("mouth_open_ratio") or 0.0)
+                        pose_info = face_feat.get("head_pose") or {}
+                        if pose_info.get("valid"):
+                            yaw_deg = abs(float(pose_info.get("yaw_deg") or 0.0))
+
+                        # Cue A: Pronounced sideways head turn (>= ~28 deg)
+                        if yaw_asym >= 0.34 or cheek_dz >= 0.28 or yaw_deg >= 22.0:
+                            turn_strength = max(
+                                yaw_asym - 0.34,
+                                cheek_dz - 0.28,
+                                (yaw_deg - 22.0) / 45.0,
+                                0.0,
+                            )
+                            best_turning_conf = max(
+                                best_turning_conf,
+                                min(0.94, 0.64 + turn_strength * 0.90),
+                            )
+                        # Cue B: Moderate sideways head turn while talking (mouth moving/open)
+                        elif (yaw_asym >= 0.25 or cheek_dz >= 0.20 or yaw_deg >= 15.0) and mouth_open >= 0.025:
+                            best_turning_conf = max(
+                                best_turning_conf,
+                                min(0.92, 0.65 + max(yaw_asym - 0.25, 0.0) * 0.80),
+                            )
+
+                    # Cue C: Upper-body / shoulder & head rotation via PoseLandmarker
+                    if best_turning_conf == 0.0 or face_hidden:
+                        pose_turn = self._extract_person_pose_turn(frame, p_box)
+                        if pose_turn is not None and pose_turn.get("nose_above_shoulders"):
+                            ear_asym = float(pose_turn.get("ear_asym") or 0.0)
+                            nose_sh = float(pose_turn.get("nose_sh_offset") or 0.0)
+                            sh_dz = float(pose_turn.get("sh_dz") or 0.0)
+                            if (
+                                (ear_asym >= 0.44 and nose_sh >= 0.14)
+                                or nose_sh >= 0.25
+                                or (sh_dz >= 0.54 and (ear_asym >= 0.32 or nose_sh >= 0.16))
+                            ):
+                                pose_turn_score = max(
+                                    ear_asym - 0.44,
+                                    nose_sh - 0.24,
+                                    (sh_dz - 0.54) * 0.5,
+                                    0.0,
+                                )
+                                best_turning_conf = max(
+                                    best_turning_conf,
+                                    min(0.93, 0.64 + pose_turn_score * 0.85),
+                                )
+
+                    if best_turning_conf > 0.0:
+                        candidates.append({
+                            "class_id": 7,
+                            "class_name": "Turning / Talking",
+                            "confidence": round(best_turning_conf, 4),
+                            "bbox": list(p_box),
+                        })
 
         return _deduplicate_behaviors(candidates)
 

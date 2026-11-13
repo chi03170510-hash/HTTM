@@ -40,6 +40,7 @@ BEHAVIOR_NAMES = (
     "Using Phone",
     "Eating",
     "Sleeping",
+    "Turning / Talking",
 )
 
 
