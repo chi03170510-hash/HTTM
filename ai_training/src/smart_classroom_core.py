@@ -673,8 +673,8 @@ class BehaviorDetector:
 
                     # Slumped / bent head posture (strong head drop/roll or low head position on desk)
                     if pose_valid and not upright_head:
-                        if roll_deg >= 20.0 or pitch_deg >= 20.0:
-                            tilt_score = max(roll_deg - 20.0, pitch_deg - 20.0, 0.0)
+                        if roll_deg >= 45.0 or pitch_deg >= 45.0:
+                            tilt_score = max(roll_deg - 45.0, pitch_deg - 45.0, 0.0)
                             pose_conf = min(0.94, 0.65 + tilt_score * 0.02)
                             best_sleeping_conf = max(best_sleeping_conf, pose_conf)
                         elif (roll_deg >= 15.0 or pitch_deg >= 15.0) and mc_rel_y >= 0.74:
