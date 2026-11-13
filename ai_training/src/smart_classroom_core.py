@@ -775,28 +775,30 @@ class UnifiedPipeline:
             annotated_frame = frame.copy()
             for obj in objects:
                 x1, y1, x2, y2 = [int(v) for v in obj["bbox"]]
-                label = f"{obj['class_name']} {obj['confidence']:.2f}"
-                color = (0, 255, 0) if obj["class_name"].lower() == "person" else (255, 165, 0)
+                is_person = obj["class_name"].lower() == "person"
+                color = (0, 255, 0) if is_person else (255, 165, 0)
                 cv2.rectangle(annotated_frame, (x1, y1), (x2, y2), color, 2)
-                cv2.putText(
-                    annotated_frame,
-                    label,
-                    (x1, max(y1 - 8, 15)),
-                    cv2.FONT_HERSHEY_SIMPLEX,
-                    0.5,
-                    color,
-                    2,
-                )
+                if not is_person:
+                    label = f"{obj['class_name']} {obj['confidence']:.2f}"
+                    cv2.putText(
+                        annotated_frame,
+                        label,
+                        (x1, max(y1 - 8, 15)),
+                        cv2.FONT_HERSHEY_SIMPLEX,
+                        0.5,
+                        color,
+                        2,
+                    )
 
             for beh in behaviors:
                 x1, y1, x2, y2 = [int(v) for v in beh["bbox"]]
-                label = f"BEH: {beh['class_name']} {beh['confidence']:.2f}"
+                label = f"{beh['class_name']} {beh['confidence']:.2f}"
                 color = (255, 0, 255)
                 cv2.rectangle(annotated_frame, (x1, y1), (x2, y2), color, 2)
                 cv2.putText(
                     annotated_frame,
                     label,
-                    (x1, max(y1 - 25, 25)),
+                    (x1, max(y1 - 8, 18)),
                     cv2.FONT_HERSHEY_SIMPLEX,
                     0.6,
                     color,

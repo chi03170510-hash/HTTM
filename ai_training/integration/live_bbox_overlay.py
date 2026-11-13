@@ -136,9 +136,11 @@ def draw_live_bboxes(frame, result, *, now, camera_fps=0.0, ai_fps=0.0,
                 x1, y1, x2, y2 = box
                 cls_name = str(obj.get("class_name", "Object"))
                 conf = float(obj.get("confidence", 0.0))
-                color = (0, 255, 0) if cls_name.lower() == "person" else (255, 165, 0)
+                is_person = cls_name.lower() == "person"
+                color = (0, 255, 0) if is_person else (255, 165, 0)
                 cv2.rectangle(output, (x1, y1), (x2, y2), color, 2)
-                _text(output, f"{cls_name} {conf:.2f}", (x1, max(12, y1 - 6)), color, scale=.45, outline=2)
+                if not is_person:
+                    _text(output, f"{cls_name} {conf:.2f}", (x1, max(12, y1 - 6)), color, scale=.45, outline=2)
                 drawn_count += 1
 
             for beh in (behaviors or ()):
@@ -150,7 +152,7 @@ def draw_live_bboxes(frame, result, *, now, camera_fps=0.0, ai_fps=0.0,
                 conf = float(beh.get("confidence", 0.0))
                 color = (255, 0, 255)
                 cv2.rectangle(output, (x1, y1), (x2, y2), color, 2)
-                _text(output, f"BEH: {cls_name} {conf:.2f}", (x1, max(18, y1 - 22)), color, scale=.50, outline=2)
+                _text(output, f"{cls_name} {conf:.2f}", (x1, max(18, y1 - 8)), color, scale=.50, outline=2)
                 drawn_count += 1
 
         elif observation is not None:
@@ -164,19 +166,20 @@ def draw_live_bboxes(frame, result, *, now, camera_fps=0.0, ai_fps=0.0,
                 x1, y1, x2, y2 = box
                 cv2.rectangle(output, (x1, y1), (x2, y2), color, 2)
                 drawn_count += 1
-                labels = [str(person.person_track_id)]
+                labels = []
                 for behavior in person.behaviors:
                     if behavior.state not in ("suspected", "detected"):
                         continue
                     duration = duration_text(behavior)
                     suffix = f" {duration}" if duration != "--" else ""
                     labels.append(f"{behavior_label(behavior.name)}: {behavior.state}{suffix}")
-                y = max(10, min(y1 + 11, height - 6 - 12 * (len(labels) - 1)))
-                for label in labels:
-                    _text(output, label, (max(2, x1 + 3), y), color, scale=.28, outline=2)
-                    y += 12
-                    if y > height - 4:
-                        break
+                if labels:
+                    y = max(10, min(y1 + 11, height - 6 - 12 * (len(labels) - 1)))
+                    for label in labels:
+                        _text(output, label, (max(2, x1 + 3), y), color, scale=.28, outline=2)
+                        y += 12
+                        if y > height - 4:
+                            break
 
     scaled_height = max(1, round(height * view_width / width))
     preview = cv2.resize(output, (view_width, scaled_height), interpolation=cv2.INTER_AREA

@@ -121,6 +121,7 @@ class TestLiveBBoxOverlay(unittest.TestCase):
 
         labels = [call.args[1] for call in put_text.call_args_list]
         self.assertTrue(any("Occupancy: 2" in lbl for lbl in labels))
+        self.assertFalse(any(lbl.startswith("Person ") for lbl in labels))
         self.assertFalse(any("FIGHTING" in lbl for lbl in labels))
         self.assertTrue(any("Using Phone, Eating, Sleeping" in lbl for lbl in labels))
         self.assertTrue(any("YOLO (yolov8n + behavior_yolo): CPU" in lbl for lbl in labels))
