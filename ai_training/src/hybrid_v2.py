@@ -239,15 +239,13 @@ def spatial_v2(frame, detections, object_evidence, face_extractor, config,
         head_body_tilt=bool(head_roll is not None and shoulder_tilt is not None and head_roll>=tilt_min
             and shoulder_tilt>=tilt_min and abs(head_roll-shoulder_tilt)<=tilt_diff)
         sleep_score_high = sleep_score is not None and sleep_score > float(config["sleeping_high_model_score"])
-        sleep_support=eye_closed or head_supported or head_body_tilt
-        if sleep_score_high and sleep_support:
-            sleep_state, sleep_reason = "detected", "behavior_score_with_closed_eye_head_support_or_aligned_head_body_tilt"
-        elif (sleep_score is not None and sleep_score >= candidate_floor) or eye_closed or head_supported:
-            sleep_state, sleep_reason = "suspected", "sleep_candidate_without_sufficient_independent_confirmation"
-        elif not validity.get("eyes") and not validity.get("pose"):
-            sleep_state, sleep_reason = "unknown", "sleep_posture_and_eye_evidence_unobservable"
+        # Eye/pose measurements are context only, never a sleeping gate.
+        if sleep_score_high:
+            sleep_state, sleep_reason = "detected", "behavior_yolo_sleeping_threshold_met"
+        elif sleep_score is not None and sleep_score >= candidate_floor:
+            sleep_state, sleep_reason = "suspected", "behavior_yolo_sleeping_below_detection_threshold"
         else:
-            sleep_state, sleep_reason = "not_detected", "no_sleeping_specific_spatial_evidence"
+            sleep_state, sleep_reason = "not_detected", "no_qualifying_sleeping_model_candidate"
         person["behaviors"]["sleeping"] = {
             "state": sleep_state, "status": "IMAGE_ONLY" if sleep_state == "detected" else sleep_state.upper(),
             "model_confidence": sleep_score, "fusion_score": None, "decision": sleep_state,
@@ -316,17 +314,14 @@ class TemporalV2Fusion:
             sustained = len(positive) >= 3 and positive[-1]["t"]-positive[0]["t"] >= duration \
                 and t-positive[-1]["t"] <= float(self.cfg["active_grace_sec"])
             if behavior == "sleeping":
-                # Need the model cue and an independent closed-eye/head-support cue.
-                valid = [r for r in recent if r["positive"] and (
-                    r["source"].get("evidence",{}).get("eye_closed") or
-                    r["source"].get("evidence",{}).get("head_supported_proxy") or
-                    r["source"].get("evidence",{}).get("head_body_tilt"))]
+                # Keep persistence checks, without requiring visible closed eyes or pose.
+                valid = [r for r in recent if r["positive"]]
                 times=[r["t"] for r in valid]
                 sustained = len(valid) >= 3 and times[-1]-times[0] >= duration \
                     and t-times[-1] <= float(self.cfg["active_grace_sec"]) \
                     and max((b-a for a,b in zip(times,times[1:])),default=0.) <= float(self.cfg["active_grace_sec"])
                 if sustained:
-                    state, reason = "detected", "persistent_sleep_score_with_independent_pose_or_eye_evidence"
+                    state, reason = "detected", "persistent_behavior_yolo_sleeping_candidate"
                 elif src["state"] == "detected": state, reason = "suspected", "spatial_sleep_candidate_waiting_for_persistence"
             elif behavior == "using_phone":
                 valid = [r for r in recent if r["positive"] and

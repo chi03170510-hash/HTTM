@@ -139,12 +139,9 @@ def spatial_v3(frame, detections, object_evidence, face_extractor, config,
                 if evidence.get("eye_closed"): support.append("ear_eye_opening_indicates_closed_eye")
                 if evidence.get("head_supported_proxy"): support.append("head_supported_by_visible_hand_proxy")
                 if evidence.get("head_body_tilt"): support.append("aligned_head_and_shoulder_tilt")
-                if evidence.get("eye_valid") is False:
-                    contradict.append("eye_state_unobservable")
                 evidence.update({"reading_writing_state": "unobservable_from_single_frame",
-                                 "head_down_is_not_sleep": True})
-                if state == "detected" and not support:
-                    state, reason = "suspected", "high_model_score_without_independent_sleep_evidence"
+                                 "head_down_is_not_sleep": True,
+                                 "eye_state_required": False})
             elif behavior == "using_phone":
                 contacts = person.get("evidence", {}).get("phone_hand_contacts", [])
                 foods = evidence.get("food_near_mouth", [])

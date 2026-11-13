@@ -327,7 +327,7 @@ def debug_evidence_rows(people, behavior_colors):
 
 
 class TemporalV4Fusion:
-    """V3 timestamps plus open-eye/wrist-motion contradiction hysteresis."""
+    """V3 timestamps plus observational eye/wrist context, without a sleep gate."""
     def __init__(self, config):
         self._impl = TemporalV3Fusion(config)
         self.cfg = config
@@ -362,29 +362,12 @@ class TemporalV4Fusion:
                     if a and b:
                         motion += math.hypot(float(a[0])-float(b[0]), float(a[1])-float(b[1]))/box_height
         writing_motion = len(recent) >= 4 and motion >= float(self.cfg["sleeping_wrist_path_person_height"])
-        # Sustained valid open-eye observations contradict sleeping. Wrist
-        # movement strengthens a reading/writing alternative but is not
-        # required to reject a sleep confirmation.
-        alternative = open_persistent
-        if alternative:
-            sleep.update({"state": "suspected", "status": "SUSPECTED", "decision": "suspected",
-                          "decision_reason": ("persistent_open_eyes_with_wrist_motion_alternative_to_sleep"
-                                              if writing_motion else "persistent_open_eyes_contradict_sleep"),
-                          "reason": ("persistent_open_eyes_with_wrist_motion_alternative_to_sleep"
-                                     if writing_motion else "persistent_open_eyes_contradict_sleep")})
-            self._impl._impl.history.get(tid, {}).get("sleeping", deque()).clear()
-            key = (tid, "sleeping")
-            if self._impl._impl.states.get(key) == "CONFIRMED":
-                self._impl._impl.states[key] = "NORMAL"
-                rec = self._impl._impl.event_records.pop(key, None)
-                self._impl._impl.event_open.pop(key, None)
-                if rec is not None:
-                    rec.update({"end_sec": float(timestamp), "duration_sec": max(0., timestamp-rec["start_sec"]),
-                                "end_reason": "awake_activity_evidence"})
+        # Eye openness and wrist motion remain diagnostics only. They must not
+        # downgrade the model decision, clear sleep history, or end an event.
         evidence.update({"wrist_path_person_height": round(motion, 5),
                          "persistent_open_eyes": open_persistent,
                          "writing_motion_candidate": writing_motion,
-                         "awake_alternative_blocks_sleep_confirmation": alternative})
+                         "awake_alternative_blocks_sleep_confirmation": False})
         sleep["evidence"] = evidence
         inputs = dict(behaviors); inputs["sleeping"] = sleep
         return self._impl.update(tid, timestamp, inputs, person_box)
