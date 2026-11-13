@@ -196,6 +196,27 @@ def _expand_bbox(
     ]
 
 
+def _is_object_near_mouth(
+    obj_bbox: list[float] | tuple[float, ...],
+    person_bbox: list[float] | tuple[float, ...],
+    mouth_xy: list[float] | tuple[float, ...] | None = None,
+) -> bool:
+    """Return True when an object bbox is positioned near the person's mouth/head."""
+    px1, py1, px2, py2 = [float(v) for v in person_bbox]
+    pw = max(px2 - px1, 1.0)
+    ph = max(py2 - py1, 1.0)
+    if mouth_xy is not None:
+        mx, my = float(mouth_xy[0]), float(mouth_xy[1])
+    else:
+        mx = px1 + 0.50 * pw
+        my = py1 + 0.25 * ph
+
+    ox1, oy1, ox2, oy2 = [float(v) for v in obj_bbox]
+    dx = max(ox1 - mx, 0.0, mx - ox2)
+    dy = max(oy1 - my, 0.0, my - oy2)
+    return (dx / pw) <= 0.28 and (dy / ph) <= 0.35 and ((dx / pw) ** 2 + (dy / ph) ** 2) ** 0.5 <= 0.40
+
+
 def _deduplicate_behaviors(behaviors: list[dict], iou_thresh: float = 0.45) -> list[dict]:
     if not behaviors:
         return []
@@ -659,10 +680,11 @@ class BehaviorDetector:
                     "bbox": list(p_box),
                 })
 
-            # --- 2. EATING CUES (class_id = 6) ---
+            # --- 2. EATING CUES (class_id = 6): require object near mouth ---
             best_eating_conf = 0.0
             face_feat = self._extract_person_face_features(frame, p_box)
             mouth_xy = face_feat.get("mouth_center_xy") if face_feat else None
+            object_near_mouth = False
 
             for food in foods:
                 f_box = food["bbox"]
@@ -670,39 +692,37 @@ class BehaviorDetector:
                 overlap = _bbox_overlap_ratio(f_box, exp_p_box)
                 in_central_span = (px1 + 0.10 * pw) <= f_cx <= (px2 - 0.10 * pw)
                 not_bottom_border_artifact = float(f_box[3]) < (h - 12.0)
-                if overlap >= 0.35 and in_central_span and not_bottom_border_artifact:
+                if (
+                    overlap >= 0.35
+                    and in_central_span
+                    and not_bottom_border_artifact
+                    and _is_object_near_mouth(f_box, p_box, mouth_xy)
+                ):
+                    object_near_mouth = True
                     boosted = min(0.95, max(float(food["confidence"]) + 0.40, 0.60))
                     best_eating_conf = max(best_eating_conf, boosted)
 
             for drink in drinks:
                 d_box = drink["bbox"]
-                d_cx = 0.5 * (d_box[0] + d_box[2])
-                d_cy = 0.5 * (d_box[1] + d_box[3])
                 overlap = _bbox_overlap_ratio(d_box, exp_p_box)
-                in_central_span = (px1 + 0.18 * pw) <= d_cx <= (px2 - 0.18 * pw)
-                in_upper_body = d_cy <= (py1 + 0.68 * ph)
-                near_mouth = (
-                    mouth_xy is not None
-                    and abs(d_cx - float(mouth_xy[0])) <= 0.25 * pw
-                    and abs(d_cy - float(mouth_xy[1])) <= 0.28 * ph
-                )
-                if overlap >= 0.40 and ((in_central_span and in_upper_body) or near_mouth):
+                not_bottom_border_artifact = float(d_box[3]) < (h - 12.0)
+                if (
+                    overlap >= 0.40
+                    and not_bottom_border_artifact
+                    and _is_object_near_mouth(d_box, p_box, mouth_xy)
+                ):
+                    object_near_mouth = True
                     boosted = min(0.92, max(float(drink["confidence"]) + 0.30, 0.58))
                     best_eating_conf = max(best_eating_conf, boosted)
 
-            for beh in primary_behaviors:
-                if beh["class_id"] == 6 and beh["confidence"] >= 0.22:
-                    if (
-                        _bbox_overlap_ratio(beh["bbox"], exp_p_box) >= 0.35
-                        and _bbox_area(beh["bbox"]) >= 0.10 * p_area
-                    ):
-                        best_eating_conf = max(best_eating_conf, float(beh["confidence"]))
-
-            if face_feat is not None:
-                mouth_open = face_feat.get("mouth_open_ratio")
-                if mouth_open is not None and float(mouth_open) >= 0.095 and not has_phone:
-                    mouth_conf = min(0.90, 0.56 + (float(mouth_open) - 0.095) * 2.5)
-                    best_eating_conf = max(best_eating_conf, mouth_conf)
+            if object_near_mouth:
+                for beh in primary_behaviors:
+                    if beh["class_id"] == 6 and beh["confidence"] >= 0.22:
+                        if (
+                            _bbox_overlap_ratio(beh["bbox"], exp_p_box) >= 0.35
+                            and _bbox_area(beh["bbox"]) >= 0.10 * p_area
+                        ):
+                            best_eating_conf = max(best_eating_conf, float(beh["confidence"]))
 
             if best_eating_conf > 0.0:
                 has_eating = True
