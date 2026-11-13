@@ -31,6 +31,8 @@ models/*.pt
 !models/best_behavior_v2.pt
 !models/best_behavior_v1_4.pt
 !models/best_behavior_v3.pt
+!models/behavior_yolo.pt
+!models/yolov8n.pt
 models/detection/
 models/pretrained_person/*.pt
 !models/pretrained_person/yolo11n_coco.pt

@@ -133,7 +133,6 @@ class ObjectDetector:
             "conf": self.conf_thresh,
             "imgsz": self.imgsz,
             "device": self.device,
-            "half": self.device != "cpu",
             "verbose": False,
         }
         results = self.model.predict(frame, **predict_kwargs)
@@ -226,7 +225,6 @@ class BehaviorDetector:
             "conf": self.conf_thresh,
             "imgsz": self.imgsz,
             "device": self.device,
-            "half": self.device != "cpu",
             "classes": sorted(self.behavior_classes.keys()),
             "verbose": False,
         }

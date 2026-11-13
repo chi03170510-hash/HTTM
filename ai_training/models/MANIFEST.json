@@ -1,6 +1,27 @@
 {
   "assets": [
     {
+      "path": "behavior_yolo.pt",
+      "size_bytes": 24487143,
+      "sha256": "64057cc20aad3cce9016d6cedea3a2d760f7d76325a6d99e72f795003fa1a76d",
+      "role": "primary_ai_smart_behavior_detector",
+      "architecture": "YOLOv8",
+      "task": "detect",
+      "active_class_mapping": {
+        "1": "Sleeping",
+        "2": "Using Phone",
+        "6": "Eating"
+      }
+    },
+    {
+      "path": "yolov8n.pt",
+      "size_bytes": 6549796,
+      "sha256": "f59b3d833e2ff32e194b5bb8e08d211dc7c5bdf144b90d2c8412c47ccfc83b36",
+      "role": "primary_ai_smart_classroom_object_detector",
+      "architecture": "YOLOv8n",
+      "task": "detect"
+    },
+    {
       "path": "best_behavior_v3.pt",
       "size_bytes": 5453658,
       "sha256": "4e0944bc284071c8af433fd361604e85a436da4f016f29681373359b0dfc5542",

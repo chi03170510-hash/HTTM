@@ -138,12 +138,14 @@ def run_preflight(
     def add(name, status, message, **details):
         checks.append({"check": name, "status": status, "message": message, **details})
 
-    coordinator_python, worker_python = (root / p / "Scripts/python.exe" for p in (".venv", ".venv-hybrid"))
+    coordinator_python = root / ".venv/Scripts/python.exe"
+    hybrid_python = root / ".venv-hybrid/Scripts/python.exe"
+    worker_python = hybrid_python if hybrid_python.is_file() else coordinator_python
     current = Path(current_executable or sys.executable).resolve()
     add(
         "invocation.python",
         "PASS" if current in (coordinator_python.resolve(), worker_python.resolve()) else "WARN",
-        "Use repository .venv for coordinator/preflight; AI worker uses .venv-hybrid",
+        "Use repository .venv (and optional .venv-hybrid for AI worker if present)",
         actual=str(current),
         expected=str(coordinator_python),
     )

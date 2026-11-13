@@ -259,6 +259,8 @@ ai/behavior_detection/video_results/
 # Keep the existing versioned behavior checkpoints
 !ai/behavior_detection/models/best.pt
 !ai/behavior_detection/models/best_behavior_v1_4.pt
+!ai_training/models/behavior_yolo.pt
+!ai_training/models/yolov8n.pt
 
 # Camera logs and screenshots
 ai/behavior_detection/logs/

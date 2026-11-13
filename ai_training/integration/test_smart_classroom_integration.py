@@ -245,10 +245,16 @@ class TestCameraCoordinatorLive(unittest.TestCase):
 
 class TestSubprocessWorkerIPC(unittest.TestCase):
     def test_live_worker_runs_smart_classroom_stream_worker(self):
-        worker_python = HTTM_ROOT / ".venv-hybrid/Scripts/python.exe"
+        hybrid_python = HTTM_ROOT / ".venv-hybrid/Scripts/python.exe"
+        venv_python = HTTM_ROOT / ".venv/Scripts/python.exe"
+        worker_python = (
+            hybrid_python if hybrid_python.is_file()
+            else venv_python if venv_python.is_file()
+            else Path(sys.executable)
+        )
         worker_script = INTEGRATION / "smart_classroom_stream_worker.py"
         if not worker_python.is_file():
-            self.skipTest(".venv-hybrid not present")
+            self.skipTest("worker python not present")
 
         with tempfile.TemporaryDirectory() as tmpdir:
             img_path = Path(tmpdir) / "synthetic.jpg"
