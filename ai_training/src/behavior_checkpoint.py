@@ -16,7 +16,13 @@ def behavior_checkpoint_path():
             f"Invalid {CHECKPOINT_ENV}={name!r}: expected one of "
             f"{APPROVED_CHECKPOINTS!r}. Unset it to use {DEFAULT_CHECKPOINT}."
         )
-    path = Path(__file__).resolve().parents[1] / "models" / name
+    root = Path(__file__).resolve().parents[2]
+    model_dir = (
+        root / "ai/behavior_detection/models"
+        if name == DEFAULT_CHECKPOINT
+        else root / "ai_training/models"
+    )
+    path = model_dir / name
     if not path.is_file():
         raise FileNotFoundError(f"Behavior checkpoint not found: {path}")
     return path

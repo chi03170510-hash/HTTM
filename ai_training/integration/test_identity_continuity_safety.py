@@ -46,7 +46,8 @@ class TestIdentityContinuitySafety(unittest.TestCase):
 
     def test_current_tracker_settings_are_read_from_production_source(self):
         self.assertEqual(evaluation.production_tracker_policy(),
-                         {"iou_threshold": .3, "max_age": 5., "keep_unmatched": False})
+                         {"iou_threshold": .3, "max_age": 5., "keep_unmatched": True,
+                          "motion_matching": True})
 
     def test_ground_truth_is_not_part_of_resolver_inputs(self):
         normal = next(f for f in safety_fixtures() if f.name == "same_track_face_absent")
@@ -93,10 +94,11 @@ class TestIdentityContinuitySafety(unittest.TestCase):
                 self.assertTrue(all(r["proposed_student_id"] is None for f in self.case(name)["trace"][1:]
                                     for r in f["observations"]))
 
-    def test_observed_exit_prevents_inheritance_by_replacement(self):
+    def test_short_absence_may_reuse_pid_but_does_not_authorize_identity_hold(self):
         case = self.case("observed_exit_replacement")
         self.assertEqual(case["metrics"]["false_identity_retentions"], 0)
-        self.assertEqual(self.row("observed_exit_replacement", tid="P2")["reason"], "no_valid_same_track_anchor")
+        self.assertEqual(case["trace"][-1]["observations"][0]["person_track_id"], "P1")
+        self.assertIsNone(self.row("observed_exit_replacement")["proposed_student_id"])
 
     def test_fresh_correct_different_sid_wins_over_cached_sid(self):
         fresh = self.row("fresh_face_changed_actor", index=1)

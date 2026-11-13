@@ -231,11 +231,15 @@ def run_preflight(root=ROOT, *, environment=None, current_executable=None, probe
         except OSError as exc:
             add("model." + role, "FAIL" if required else "WARN", f"{path}: {exc}")
 
+    def behavior_model_path(name):
+        model_dir = "ai/behavior_detection/models" if name == default else "ai_training/models"
+        return root / model_dir / name
+
     if selected:
-        inventory(root / "ai_training/models" / selected, "behavior_selected", True)
+        inventory(behavior_model_path(selected), "behavior_selected", True)
     for name in approved:
         if name != selected:
-            inventory(root / "ai_training/models" / name, "behavior_alternative", False)
+            inventory(behavior_model_path(name), "behavior_alternative", False)
     inventory(root / "ai_training/models/pretrained_person/yolo11n_coco.pt", "coco", True)
     inventory(root / "ai_training/models/face_landmarker.task", "face_landmarks_optional", False)
     inventory(root / "ai_training/models/pose_landmarker_full.task", "pose_optional", False)

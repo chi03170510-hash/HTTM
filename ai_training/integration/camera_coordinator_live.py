@@ -68,7 +68,8 @@ def ai_loop(frame_queue, result_queue, stop_event, max_observations=_FROM_ENVIRO
     person_tracker = PersonTracker(
         iou_threshold=0.3,
         max_age=PERSON_TRACK_MAX_AGE,
-        keep_unmatched=False,
+        keep_unmatched=True,
+        motion_matching=True,
     )
     duration_tracker = BehaviorDurationTracker(max_gap=5.0)
     warning_observer = BehaviorWarningObserver(WARNING_CONFIG)

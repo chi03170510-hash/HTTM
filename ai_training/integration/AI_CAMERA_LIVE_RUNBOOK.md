@@ -5,6 +5,28 @@ BehaviorDurationTracker → AI Panel và AI Snapshot BBox B1–B5. Không BE/FE/
 WARNING disabled; Identity Shadow chỉ diagnostic, T_hold=None. Các lệnh mở camera
 bên dưới dành cho người dùng chạy khi đã có thiết bị; không chạy trong AI2.
 
+## Tracking mã người ẩn danh trong Camera Live (2026-11-13)
+
+- Camera Live bật `PersonTracker(motion_matching=True, keep_unmatched=True,
+  max_age=5.0)`: dự đoán vận tốc tâm bbox theo thời gian và ghép một-một toàn cục
+  bằng Hungarian assignment viết bằng stdlib, không cần thêm dependency. Không dùng `person_ref` làm danh tính, không
+  cần khuôn mặt để gán `P1`, `P2` cho các detection người khác nhau.
+- Track mất dấu được giữ tối đa 5 giây từ lần thấy thật gần nhất; không xuất bbox,
+  nhãn hay bằng chứng hành vi giả cho track đang mất dấu. Người quay lại gần vị
+  trí dự đoán trong khoảng này có thể giữ mã; quá hạn nhận mã mới, không tái dùng
+  số cũ trong cùng phiên. Thời gian này dùng clock cập nhật tracker hiện hành.
+- Chế độ này giảm đổi mã khi chuyển động/giao cắt có quỹ đạo rõ; không bảo đảm
+  đúng người sau che khuất hoàn toàn, đổi hướng đột ngột hoặc FPS quá thấp.
+  Người mới vào cùng vị trí người vừa mất cũng có thể nhận mã cũ. Đây là tracking
+  hình học ngắn hạn, không phải nhận diện lại danh tính.
+- Bbox trả ra vẫn là bbox detection thật của frame AI hiện tại, không phải bbox
+  dự đoán vẽ lên video. Không thay đổi pacing/model/ngưỡng hành vi.
+- Nhánh Face vẫn giữ nguyên trong lần chỉnh tracking này. Thời lượng vẫn yêu cầu
+  danh tính hợp lệ; một frame thiếu người ngắt đoạn thời lượng dù track giữ mã.
+  Chưa có chế độ tắt Face hoặc cộng thời lượng ẩn danh theo `P…`.
+- Hành vi mặc định của các caller tracker khác vẫn là IoU cũ; chỉ Camera Live
+  bật chính sách motion mới. CLI diagnostic stdlib-only vẫn chạy được.
+
 ## 1. Entrypoint và môi trường đúng
 
 | Vai trò | Interpreter/file thực tế |
@@ -86,11 +108,14 @@ AI2 không sửa requirements hoặc môi trường đã được thử nghiệm
 
 | Model | Bytes | SHA256 đo được |
 |---|---:|---|
-| `best_behavior_v1_4.pt` — mặc định | 5,467,994 | `6ce96c34ddc62327de37aa1b7ede9cd12863f4c0299f3d39b70f313263a04b47` |
+| `ai/behavior_detection/models/best_behavior_v1_4.pt` — mặc định | 5,467,994 | `6ce96c34ddc62327de37aa1b7ede9cd12863f4c0299f3d39b70f313263a04b47` |
 | `best_behavior_v2.pt` — tùy chọn có sẵn | 5,473,818 | `4c932dc472c4480d7b1910203a5f4c09782ace770bd8fb8b8f20e8b638e3861e` |
 | `pretrained_person/yolo11n_coco.pt` | 5,613,764 | `0ebbc80d4a7680d14987a577cd21342b65ecfd94632bd9a8da63ae6417644ee1` |
 
-Hai checkpoint behavior chỉ được selector chấp nhận theo tên trên. Worker kiểm tra
+Hai checkpoint behavior chỉ được selector chấp nhận theo tên trên. V1.4 luôn lấy từ
+`ai/behavior_detection/models/best_behavior_v1_4.pt`, không lấy bản trong
+`ai_training/models/`; V2 tùy chọn vẫn nằm trong `ai_training/models/`.
+Worker kiểm tra
 classes Sleeping/Using Phone khi load thật; preflight không load để xác nhận mapping.
 Pose/Face `.task` optional cũng được inventory; hand asset bị worker chủ động chọn
 `disabled_by_v6.task` không tồn tại. Không tải hand model cho demo này.

@@ -1,6 +1,43 @@
 ﻿import math
 from dataclasses import dataclass
 
+def _minimum_assignment(costs):
+    """Rectangular Hungarian assignment (rows <= columns), without AI packages."""
+    if not costs:
+        return []
+    n, m = len(costs), len(costs[0])
+    u, v, owners = [0.0] * (n + 1), [0.0] * (m + 1), [0] * (m + 1)
+    for row in range(1, n + 1):
+        owners[0] = row
+        column = 0
+        best, used, previous = [math.inf] * (m + 1), [False] * (m + 1), [0] * (m + 1)
+        while True:
+            used[column] = True
+            current_row = owners[column]
+            delta, next_column = math.inf, 0
+            for candidate in range(1, m + 1):
+                if used[candidate]:
+                    continue
+                reduced = costs[current_row - 1][candidate - 1] - u[current_row] - v[candidate]
+                if reduced < best[candidate]:
+                    best[candidate], previous[candidate] = reduced, column
+                if best[candidate] < delta:
+                    delta, next_column = best[candidate], candidate
+            for candidate in range(m + 1):
+                if used[candidate]:
+                    u[owners[candidate]] += delta
+                    v[candidate] -= delta
+                else:
+                    best[candidate] -= delta
+            column = next_column
+            if owners[column] == 0:
+                break
+        while column:
+            prior = previous[column]
+            owners[column] = owners[prior]
+            column = prior
+    return [(owners[column] - 1, column - 1) for column in range(1, m + 1) if owners[column]]
+
 
 def calculate_iou(box_a, box_b):
     ax1, ay1, ax2, ay2 = box_a
@@ -27,16 +64,63 @@ class PersonTrack:
     bbox: tuple
     last_seen: float
     person_ref: str
+    velocity: tuple = (0.0, 0.0)
+    observations: int = 1
+    motion_at: float | None = None
+
+
+def _center(box):
+    return ((box[0] + box[2]) / 2, (box[1] + box[3]) / 2)
+
+
+def _motion_matches(tracks, detections, timestamp, iou_threshold):
+    """Global one-to-one assignment with dummy columns for unmatched tracks.
+
+    Uses geometry/motion only, never frame-local person_ref or face identity.
+    Dormant tracks are candidates, but never emitted without a real detection.
+    """
+    track_ids = sorted(tracks)
+    if not track_ids or not detections:
+        return []
+    costs = []
+    for track_id in track_ids:
+        track = tracks[track_id]
+        elapsed = max(0.0, timestamp - track.motion_at) if track.motion_at is not None else 0.0
+        dx, dy = (v * elapsed for v in track.velocity)
+        box = track.bbox
+        predicted = (box[0] + dx, box[1] + dy, box[2] + dx, box[3] + dy)
+        width, height = box[2] - box[0], box[3] - box[1]
+        cx, cy = _center(predicted)
+        row = []
+        for detection in detections:
+            other = detection["bbox"]
+            ow, oh = other[2] - other[0], other[3] - other[1]
+            size_ratio = max(width / ow, ow / width, height / oh, oh / height)
+            ox, oy = _center(other)
+            distance = math.hypot((ox - cx) / width, (oy - cy) / height)
+            iou = calculate_iou(predicted, other)
+            # Reject teleports and major scale changes rather than borrowing IDs.
+            valid = size_ratio <= 2.5 and (iou >= iou_threshold or distance <= .65)
+            score = .6 * iou + .4 * math.exp(-2 * distance)
+            row.append(-score if valid else 1e6)
+        costs.append(row + [0.0] * len(track_ids))
+    return [(0.0, track_ids[row], column) for row, column in _minimum_assignment(costs)
+            if column < len(detections) and costs[row][column] < 0]
 
 
 class PersonTracker:
-    """IoU tracking with an optional conservative policy for observed misses.
+    """Geometry-only tracking; optional motion/global assignment for live use.
 
-    max_age bounds elapsed seconds before matching. With keep_unmatched=False,
-    each processed result also retires any track with no matching detection.
+    max_age bounds elapsed seconds since a real detection. keep_unmatched=True
+    retains dormant tracks for short occlusions, but output contains only current
+    detections. The legacy IoU policy remains available to existing callers.
+    Motion cannot establish identity after complete occlusion or prove re-ID.
     """
 
-    def __init__(self, iou_threshold=0.3, max_age=3.0, keep_unmatched=True):
+    def __init__(self, iou_threshold=0.3, max_age=3.0, keep_unmatched=True,
+                 motion_matching=False):
+        self.motion_matching = motion_matching
+        self._last_timestamp = None
         self.iou_threshold = iou_threshold
         self.max_age = max_age
         self.keep_unmatched = keep_unmatched
@@ -44,6 +128,12 @@ class PersonTracker:
         self.next_id = 1
 
     def update(self, people, timestamp):
+        timestamp = float(timestamp)
+        if not math.isfinite(timestamp):
+            raise ValueError("timestamp must be finite")
+        if self._last_timestamp is not None and timestamp < self._last_timestamp:
+            raise ValueError("tracking timestamps must not go backwards")
+        self._last_timestamp = timestamp
         # Remove expired tracks.
         expired = [
             track_id
@@ -87,7 +177,7 @@ class PersonTracker:
 
         candidates = []
 
-        for track_id, track in self.tracks.items():
+        for track_id, track in (() if self.motion_matching else self.tracks.items()):
             for index, detection in enumerate(detections):
                 iou = calculate_iou(
                     track.bbox,
@@ -97,7 +187,10 @@ class PersonTracker:
                 if iou >= self.iou_threshold:
                     candidates.append((iou, track_id, index))
 
-        candidates.sort(reverse=True)
+        if self.motion_matching:
+            candidates = _motion_matches(self.tracks, detections, timestamp, self.iou_threshold)
+        else:
+            candidates.sort(reverse=True)
 
         matched_tracks = set()
         matched_detections = set()
@@ -113,6 +206,15 @@ class PersonTracker:
             detection = detections[index]
             track = self.tracks[track_id]
 
+            if track.motion_at is not None and timestamp > track.motion_at:
+                dt = timestamp - track.motion_at
+                before, after = _center(track.bbox), _center(detection["bbox"])
+                measured = tuple((new - old) / dt for old, new in zip(before, after))
+                weight = 1.0 if track.observations == 1 else .7
+                track.velocity = tuple(weight * new + (1 - weight) * old
+                                       for new, old in zip(measured, track.velocity))
+            track.observations += 1
+            track.motion_at = timestamp
             track.bbox = detection["bbox"]
             track.person_ref = detection["person_ref"]
             track.last_seen = timestamp
@@ -143,6 +245,7 @@ class PersonTracker:
                 bbox=detection["bbox"],
                 last_seen=timestamp,
                 person_ref=detection["person_ref"],
+                motion_at=timestamp,
             )
 
             results.append({

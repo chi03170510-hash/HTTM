@@ -15,10 +15,8 @@ from src.hybrid_v4 import prepare_objects_v4, debug_evidence_rows
 from src.hybrid_v5 import TemporalV5Fusion, debug_sidecar_v5
 from src.hybrid_v3 import spatial_v3
 from src.hybrid_v4 import _unique_center_owner
-from src.hybrid_v6_1 import (prepare_objects_v6_1, spatial_v6_1,
-    assess_food_head_v6_1, deduplicate_sleeping_people, _set_decision)
-
-prepare_objects_v7 = prepare_objects_v6_1
+# V7 owns the rule implementations below. Do not bind its public object
+# preparer to an imported V6.1 function before those definitions are loaded.
 
 
 def add_sleeping_highres_proposals_v7(frame, model, detections, object_evidence, names, config, device="cpu"):
@@ -184,7 +182,10 @@ def apply_ambiguous_sleep_phone_conflicts_v7(out,config):
             in_person=float(pbox[0])<=cx<=float(pbox[2]) and float(pbox[1])<=cy<=float(pbox[3])
             in_sleep=float(sbox[0])<=cx<=float(sbox[2]) and float(sbox[1])<=cy<=float(sbox[3])
             assoc=next((a for a in out.get("v6_1_phone_associations",[]) if a.get("phone_detection_id")==phone.get("detection_id")),{})
-            ambiguous_owner=assoc.get("person_detection_id") not in (None,person.get("person_ref"))
+            owner=assoc.get("person_detection_id")
+            ambiguous_owner=(owner not in (None,person.get("person_ref")) or
+                (owner is None and assoc.get("status") in ("AMBIGUOUS","UNCERTAIN")
+                 and person.get("person_ref") in assoc.get("candidate_person_ids",[])))
             if in_person and in_sleep and ambiguous_owner:possible.append({"phone_detection_id":phone.get("detection_id"),"phone_box":b,
                 "phone_source":phone.get("source"),"phone_owner_ref":assoc.get("person_detection_id"),
                 "association_candidates":assoc.get("candidate_person_ids"),"confidence":phone.get("confidence")})
@@ -215,9 +216,18 @@ def spatial_v7(frame,detections,object_evidence,face_extractor,config,spatial_fu
         else:merged.append(food)
     out["food_detections"]=merged
     owner={x.get("food_detection_id"):x.get("person_detection_id") for x in out.get("v6_1_food_associations",[])}
+    crop_people=[{"detection_id":p.get("person_ref"),
+                  "bbox_xyxy":p.get("person_bbox_xyxy_clipped") or p.get("bbox_xyxy")}
+                 for p in out.get("people",[])]
+    crop_associations=[]
     for food in crops:
         if food.get("detection_id") in {x.get("detection_id") for x in merged}:
-            owner[food["detection_id"]]=food.get("person_ref")
+            food_owner,status,candidates=_unique_center_owner(food["bbox_xyxy"],crop_people,near_ratio=0.)
+            # Mouth-centered crop provenance also cannot disambiguate overlapping
+            # people; confirmation still needs unique same-person ownership.
+            owner[food["detection_id"]]=food_owner
+            crop_associations.append({"food_detection_id":food["detection_id"],
+                "person_detection_id":food_owner,"status":status,"candidate_person_ids":candidates})
     # Re-evaluate eating using the same strict visible-mouth spatial rule.
     for person in out.get("people",[]):
         pid=person.get("person_ref");mouth,head_h,mouth_valid=_mouth_and_head_v7(person)
@@ -233,7 +243,8 @@ def spatial_v7(frame,detections,object_evidence,face_extractor,config,spatial_fu
         elif state=="suspected":_set_decision(eat,"suspected",reason,missing=["visible_mouth_landmark"],extra=extra)
         elif state=="not_detected":_set_decision(eat,"not_detected",reason,missing=[],extra=extra)
         else:_set_decision(eat,"unknown","no_associated_supported_food_object",missing=["supported_food_object"],extra=extra)
-    out["raw_mouth_food_detections"]=crops;out["mouth_food_crop_audit"]={**crop_audit,"duplicates":duplicate_audit}
+    out["raw_mouth_food_detections"]=crops;out["mouth_food_crop_audit"]={**crop_audit,"duplicates":duplicate_audit,
+        "associations":crop_associations}
     out["v7_sleep_phone_conflicts"]=ambiguous_sleep_conflicts
     out["v7_sleeping_duplicate_removals"]=deduplicate_sleeping_people(out.get("people",[]),config)
     return out
@@ -315,9 +326,8 @@ def prepare_objects_v6_1(frame, objects, *, config, device="cpu"):
     assocs=[]
     for phone in evidence.get("phone_detections",[]):
         owner,status,candidates=_unique_center_owner(phone["bbox_xyxy"],evidence.get("person_detections",[]),near_ratio=0.)
-        if owner is None and phone.get("source")=="person_crop_coco":
-            matching=[p for p in evidence.get("person_detections",[]) if p.get("detection_id")==phone.get("person_crop_ref")]
-            if len(matching)==1:owner,status,candidates=_unique_center_owner(phone["bbox_xyxy"],matching,near_ratio=0.)
+        # A padded crop may contain the neighbor's device too. Crop origin is
+        # provenance, not evidence that resolves overlapping person ownership.
         assocs.append({"phone_detection_id":phone.get("detection_id"),"person_detection_id":owner,"status":status,
             "candidate_person_ids":candidates,"candidate_count":len(candidates),"confidence":phone.get("confidence")})
     evidence["associations"]=assocs
@@ -327,9 +337,6 @@ def prepare_objects_v6_1(frame, objects, *, config, device="cpu"):
     foods=[]
     for food in evidence.get("food_detections",[]):
         owner,status,candidates=_unique_center_owner(food["bbox_xyxy"],evidence.get("person_detections",[]),near_ratio=0.)
-        if owner is None and food.get("source")=="person_crop_coco":
-            matching=[p for p in evidence.get("person_detections",[]) if p.get("detection_id")==food.get("person_crop_ref")]
-            if len(matching)==1:owner,status,candidates=_unique_center_owner(food["bbox_xyxy"],matching,near_ratio=0.)
         foods.append({"food_detection_id":food.get("detection_id"),"person_detection_id":owner,"status":status,
             "candidate_person_ids":candidates,"candidate_count":len(candidates)})
     evidence["food_person_associations"]=foods
@@ -337,6 +344,11 @@ def prepare_objects_v6_1(frame, objects, *, config, device="cpu"):
         "phone_final_count":len(evidence.get("phone_detections",[])),"food_final_count":len(evidence.get("food_detections",[])),
         "classes_used":["cell phone",*sorted(objects.food_classes)],"checkpoint":"same pretrained COCO checkpoint; person crops only"}
     return evidence
+
+
+# Bind only after the local implementation exists; both image and live workers
+# import this entrypoint and must execute exactly the same V7 object rules.
+prepare_objects_v7 = prepare_objects_v6_1
 
 
 def deduplicate_sleeping_people(people, config):
@@ -399,12 +411,33 @@ def spatial_v6_1(frame, detections, object_evidence, face_extractor, config, spa
                 item=(a,phone_box,geometry)
                 (plausible_matches if valid else implausible_matches).append(item)
         if candidate and plausible_matches:
+            pose=person.get("evidence",{}).get("pose_landmarks") or {}
+            surface_matches=[item for item in plausible_matches
+                if phone_surface_candidate(item[1],pbox,pose,config)]
+            surface_conflict=len(surface_matches)==len(plausible_matches)
+            sleeping_conflict=(person["behaviors"]["sleeping"].get("state")=="detected"
+                and float(candidate.get("confidence",0.))<float(config["phone_sleeping_conflict_score_threshold"])
+                and not any(phone_has_nearby_wrist(p,pbox,pose,config) for _,p,_ in plausible_matches))
+            phone_state,phone_reason=decide_phone_candidate(float(candidate["confidence"]),True,False,config,
+                surface_conflict=surface_conflict,sleeping_conflict=sleeping_conflict)
             _,best_phone,best_geometry=max(plausible_matches,key=lambda x:float(x[1].get("confidence",0.)))
-            _set_decision(det,"detected","YOLO_PHONE_AND_SAME_PERSON_COCO_OBJECT",bbox=best_phone.get("bbox_xyxy"),
-                supporting=["behavior_yolo_using_phone_candidate","unique_same_person_coco_phone_object"],extra={
-                "reason_code":"PHONE_OBJECT_ASSOCIATED","phone_association_status":"ASSOCIATED_GEOMETRICALLY",
-                "phone_detection_ids":[a.get("phone_detection_id") for a,_,_ in plausible_matches],"phone_boxes":[p.get("bbox_xyxy") for _,p,_ in plausible_matches],
-                "phone_object_geometry":best_geometry,"hand_or_wrist_required":False,"phone_surface_rule_applied":False,"raw_yolo_score_is_not_calibrated_probability":True})
+            # V6.1's object confirmation must not override the V7 desk/sleep
+            # interaction guards. Hands remain optional outside these conflicts.
+            _set_decision(det,phone_state,
+                "YOLO_PHONE_AND_SAME_PERSON_COCO_OBJECT" if phone_state=="detected" else phone_reason,
+                bbox=best_phone.get("bbox_xyxy"),
+                supporting=["behavior_yolo_using_phone_candidate","unique_same_person_coco_phone_object"],
+                missing=(["visible_wrist_or_other_interaction_evidence_for_flat_low_phone"] if surface_conflict else
+                    ["visible_wrist_or_other_interaction_evidence_while_sleeping_candidate"] if sleeping_conflict else []),
+                extra={"reason_code":"PHONE_OBJECT_ASSOCIATED" if phone_state=="detected" else
+                    "PHONE_SURFACE_CONFLICT" if surface_conflict else "PHONE_SLEEPING_CONFLICT",
+                "phone_association_status":"ASSOCIATED_GEOMETRICALLY",
+                "phone_detection_ids":[a.get("phone_detection_id") for a,_,_ in plausible_matches],
+                "phone_boxes":[p.get("bbox_xyxy") for _,p,_ in plausible_matches],
+                "phone_object_geometry":best_geometry,"hand_or_wrist_required":False,
+                "phone_surface_rule_applied":True,"phone_surface_conflict":surface_conflict,
+                "sleeping_phone_conflict":bool(sleeping_conflict),
+                "raw_yolo_score_is_not_calibrated_probability":True})
         elif candidate and implausible_matches:
             _set_decision(det,"suspected","PHONE_OBJECT_GEOMETRY_IMPLAUSIBLE",missing=["phone_object_scale_consistent_with_handheld_device"],extra={
                 "reason_code":"PHONE_OBJECT_GEOMETRY_IMPLAUSIBLE","rejected_phone_objects":[{"phone_detection_id":a.get("phone_detection_id"),

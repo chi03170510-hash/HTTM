@@ -1,6 +1,8 @@
 import sys
 import unittest
 import json
+from copy import deepcopy
+from unittest.mock import patch
 from pathlib import Path
 
 AI=Path(__file__).resolve().parents[1]
@@ -204,6 +206,154 @@ class TestHybridV7(unittest.TestCase):
     def test_weak_food_crop_object_score_is_not_spatial_eating_evidence(self):
         self.assertFalse(food_crop_candidate_score_eligible_v7(.045,self.cfg))
         self.assertTrue(food_crop_candidate_score_eligible_v7(.10,self.cfg))
+
+
+class TestV7PipelineRules(unittest.TestCase):
+    """Exercise final V7 decisions, not only the standalone rule helpers."""
+
+    def setUp(self):
+        self.cfg = json.loads((AI / "config/hybrid_v7.json").read_text(encoding="utf-8"))
+        self.cfg["food_mouth_crop_enabled"] = False
+
+    def pipeline(self, *, phone_box=None, phone_score=.8, sleep_score=None, pose=None,
+                 face=None, food_box=None, food_class="apple", food_owner="p"):
+        from src.hybrid_v7 import spatial_v7
+        pbox = [0, 0, 200, 400]
+        detections = []
+        if phone_score is not None:
+            detections.append({"class_name": "using_phone", "confidence": phone_score,
+                               "bbox_xyxy": pbox})
+        if sleep_score is not None:
+            detections.append({"class_name": "sleeping", "confidence": sleep_score,
+                               "bbox_xyxy": pbox})
+        phones = ([{"detection_id": "ph", "bbox_xyxy": phone_box, "confidence": .8}]
+                  if phone_box else [])
+        foods = ([{"detection_id": "food", "bbox_xyxy": food_box, "class_name": food_class,
+                   "confidence": .8}] if food_box else [])
+        obj = {"phone_detections": phones, "food_detections": foods,
+               "food_person_associations": ([{"food_detection_id": "food", "person_detection_id": food_owner}]
+                                            if foods else []),
+               "v6_phone_person_associations": ([{
+                   "phone_detection_id": "ph", "person_detection_id": "p",
+                   "status": "ASSOCIATED_GEOMETRICALLY", "candidate_person_ids": ["p"]
+               }] if phones else [])}
+        base = {"people": [{"person_ref": "p", "bbox_xyxy": pbox,
+                            "person_bbox_xyxy_clipped": pbox, "yolo_detections": detections,
+                            "evidence": {"face": face or {}, "pose_landmarks": pose or {}},
+                            "behaviors": {b: {"state": "unknown", "evidence": {}}
+                                          for b in ("sleeping", "using_phone", "eating", "turning_back")}}],
+                "phone_detections": phones, "food_detections": foods}
+        with patch("src.hybrid_v7.spatial_v3", return_value=deepcopy(base)):
+            return spatial_v7(None, detections, obj, None, self.cfg, None, None, None)["people"][0]["behaviors"]
+
+    def test_final_v7_keeps_desk_phone_suspected(self):
+        result = self.pipeline(phone_box=[50, 300, 110, 320])
+        self.assertEqual(result["using_phone"]["state"], "suspected")
+        self.assertEqual(result["using_phone"]["decision_reason"],
+                         "flat_low_phone_without_nearby_wrist_may_be_resting_on_surface")
+        self.assertIsNone(result["using_phone"]["bounding_box"])
+
+    def test_final_v7_wrist_interaction_can_confirm_phone(self):
+        result = self.pipeline(phone_box=[50, 300, 110, 320],
+                               pose={"left_wrist": {"x": 70, "y": 310, "visibility": .99}})
+        self.assertEqual(result["using_phone"]["state"], "detected")
+
+    def test_final_v7_phone_near_face_does_not_require_wrist(self):
+        result = self.pipeline(phone_box=[70, 30, 90, 70])
+        self.assertEqual(result["using_phone"]["state"], "detected")
+
+    def test_final_v7_sleep_conflict_does_not_confirm_phone_without_interaction(self):
+        result = self.pipeline(phone_box=[70, 160, 90, 200], phone_score=.35, sleep_score=.9)
+        self.assertEqual(result["using_phone"]["state"], "suspected")
+        self.assertTrue(result["using_phone"]["evidence"]["sleeping_phone_conflict"])
+        self.assertNotEqual(result["sleeping"]["state"], "detected")
+
+    def test_final_v7_preserves_geometry_check(self):
+        result = self.pipeline(phone_box=[20, 80, 160, 250])
+        self.assertEqual(result["using_phone"]["state"], "suspected")
+        self.assertEqual(result["using_phone"]["evidence"]["reason_code"], "PHONE_OBJECT_GEOMETRY_IMPLAUSIBLE")
+
+    def test_final_v7_no_behavior_candidate_does_not_confirm_phone_object(self):
+        result = self.pipeline(phone_box=[70, 30, 90, 70], phone_score=None)
+        self.assertEqual(result["using_phone"]["state"], "unknown")
+
+    def test_final_v7_sleep_threshold_without_face_or_pose(self):
+        for score, expected in ((None, "not_detected"), (.74, "suspected"), (.75, "detected")):
+            with self.subTest(score=score):
+                result = self.pipeline(phone_score=None, sleep_score=score)
+                self.assertEqual(result["sleeping"]["state"], expected)
+
+    def test_final_v7_turning_requires_classroom_rear_calibration(self):
+        result = self.pipeline(phone_score=None)
+        self.assertEqual(result["turning_back"]["state"], "unknown")
+        self.assertEqual(result["turning_back"]["decision_reason"], "rear_direction_uncalibrated")
+
+    def test_final_v7_eating_requires_food_near_visible_mouth(self):
+        cases = [
+            ({"food_box": [90, 70, 110, 90], "face": {"mouth_center_xy_frame": [100, 80]}}, "detected"),
+            ({"food_box": [90, 70, 110, 90]}, "suspected"),
+            ({"food_box": [90, 300, 110, 320], "face": {"mouth_center_xy_frame": [100, 80]}}, "not_detected"),
+            ({"food_box": [90, 70, 110, 90], "face": {"mouth_center_xy_frame": [100, 80]}, "food_owner": "other"}, "unknown"),
+            ({"food_box": [90, 70, 110, 90], "face": {"mouth_center_xy_frame": [100, 80]}, "food_class": "cup"}, "unknown"),
+        ]
+        for inputs, expected in cases:
+            with self.subTest(inputs=inputs):
+                result = self.pipeline(phone_score=None, **inputs)
+                self.assertEqual(result["eating"]["state"], expected)
+
+    def test_exported_prepare_uses_v7_local_rules(self):
+        from src import hybrid_v7
+        self.assertIs(hybrid_v7.prepare_objects_v7, hybrid_v7.prepare_objects_v6_1)
+
+    def test_crop_origin_cannot_resolve_overlapping_people(self):
+        from src.hybrid_v7 import prepare_objects_v7
+        people = [{"detection_id": "a", "bbox_xyxy": [0, 0, 100, 200]},
+                  {"detection_id": "b", "bbox_xyxy": [50, 0, 150, 200]}]
+        base = {"person_detections": people, "phone_detections": [], "food_detections": []}
+        crop = [{"detection_id": "ph", "class_name": "cell phone", "confidence": .8,
+                 "bbox_xyxy": [60, 100, 80, 120], "source": "person_crop_coco", "person_crop_ref": "a"},
+                {"detection_id": "food", "class_name": "apple", "confidence": .8,
+                 "bbox_xyxy": [60, 30, 80, 50], "source": "person_crop_coco", "person_crop_ref": "a"}]
+        objects = type("Objects", (), {"food_classes": {"apple"}})()
+        with patch("src.hybrid_v7.prepare_objects_v6", return_value=deepcopy(base)), \
+             patch("src.hybrid_v7._crop_person_object_proposals", return_value=crop):
+            result = prepare_objects_v7(None, objects, config=self.cfg)
+        for key in ("v6_phone_person_associations", "food_person_associations"):
+            self.assertIsNone(result[key][0]["person_detection_id"])
+            self.assertEqual(set(result[key][0]["candidate_person_ids"]), {"a", "b"})
+
+    def test_mouth_crop_food_requires_unique_person_owner(self):
+        from src.hybrid_v7 import spatial_v7
+        for overlapping in (False, True):
+            with self.subTest(overlapping=overlapping):
+                boxes = [[0, 0, 100, 200]]
+                if overlapping:
+                    boxes.append([40, 0, 140, 200])
+                people = [{"person_ref": str(i), "bbox_xyxy": box,
+                           "evidence": {"face": {"mouth_center_xy_frame": [60, 35]}},
+                           "behaviors": {"sleeping": {"state": "unknown"}, "eating": {"evidence": {}}}}
+                          for i, box in enumerate(boxes)]
+                food = {"detection_id": "mouth_food_0", "class_name": "apple", "confidence": .8,
+                        "bbox_xyxy": [50, 25, 70, 45], "person_ref": "0"}
+                base = {"people": people, "food_detections": [], "v6_1_food_associations": []}
+                with patch("src.hybrid_v7.spatial_v6_1", return_value=base), \
+                     patch("src.hybrid_v7.mouth_focused_food_proposals_v7", return_value=([food], {})):
+                    out = spatial_v7(None, [], {}, None, self.cfg, None, None, None)
+                expected = "unknown" if overlapping else "detected"
+                self.assertEqual(out["people"][0]["behaviors"]["eating"]["state"], expected)
+                if overlapping:
+                    self.assertEqual(out["people"][1]["behaviors"]["eating"]["state"], "unknown")
+
+    def test_ambiguous_phone_without_owner_demotes_sleep(self):
+        from src.hybrid_v7 import apply_ambiguous_sleep_phone_conflicts_v7
+        person = {"person_ref": "a", "bbox_xyxy": [0, 0, 100, 200], "behaviors": {
+            "sleeping": {"state": "detected", "evidence": {"sleeping_yolo_box": [0, 0, 100, 200]}}}}
+        out = {"people": [person], "phone_detections": [
+            {"detection_id": "ph", "bbox_xyxy": [60, 100, 80, 120], "confidence": .8}],
+            "v6_1_phone_associations": [{"phone_detection_id": "ph", "person_detection_id": None,
+                                        "status": "UNCERTAIN", "candidate_person_ids": ["a", "b"]}]}
+        self.assertEqual(len(apply_ambiguous_sleep_phone_conflicts_v7(out, self.cfg)), 1)
+        self.assertEqual(person["behaviors"]["sleeping"]["state"], "suspected")
 
 
 if __name__=="__main__":unittest.main()

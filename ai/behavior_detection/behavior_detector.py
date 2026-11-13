@@ -1,9 +1,9 @@
 
 """
 HTTM - YOLO Behavior Detector
-Official Round 3 Model
+Behavior V1.4 Model
 
-Model: ai/behavior_detection/models/best.pt
+Model: ai/behavior_detection/models/best_behavior_v1_4.pt
 
 Supported behaviors:
     0 - sleeping
@@ -26,7 +26,7 @@ else:  # Preserve imports from scripts run inside ai/behavior_detection.
     from diagnostics import emit_debug
 
 BASE_DIR = Path(__file__).resolve().parent
-DEFAULT_MODEL_PATH = BASE_DIR / "models" / "best.pt"
+DEFAULT_MODEL_PATH = BASE_DIR / "models" / "best_behavior_v1_4.pt"
 
 EXPECTED_CLASSES = {
     0: "sleeping",
@@ -37,7 +37,7 @@ CANDIDATE_CONFIDENCE = 0.10
 
 class BehaviorDetector:
     """
-    Detect student behaviors using the official Round 3 YOLO model.
+    Detect student behaviors using the V1.4 YOLO model.
 
     Compatible with:
         - detector_adapter.py
@@ -55,7 +55,7 @@ class BehaviorDetector:
         *,
         debug_detections=False,
     ):
-        # 1. Select official Round 3 checkpoint
+        # 1. Select V1.4 checkpoint
         self.model_path = (
             Path(model_path)
             if model_path is not None
@@ -83,7 +83,7 @@ class BehaviorDetector:
             for class_id, name in name_items
         }
 
-        # 4. Validate official Round 3 classes
+        # 4. Validate V1.4 classes
         if self.class_names != EXPECTED_CLASSES:
             raise RuntimeError(
                 "Incorrect YOLO checkpoint classes.\n"

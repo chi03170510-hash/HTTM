@@ -33,7 +33,8 @@ class TestCameraPreflight(unittest.TestCase):
         for name in ("hybrid_v7.json", "hybrid_behavior_v1_4.json"):
             data = json.loads((preflight.ROOT / "ai_training/config" / name).read_text())
             (configs / name).write_text(json.dumps(data), encoding="utf-8")
-        for name in ("best_behavior_v1_4.pt", "best_behavior_v2.pt", "pretrained_person/yolo11n_coco.pt",
+        self.write("ai/behavior_detection/models/best_behavior_v1_4.pt", b"synthetic placeholder; not model weights")
+        for name in ("best_behavior_v2.pt", "pretrained_person/yolo11n_coco.pt",
                      "face_landmarker.task", "pose_landmarker_full.task"):
             self.write("ai_training/models/" + name, b"synthetic placeholder; not model weights")
         self.home = Path(self.temp.name) / "synthetic home"
@@ -95,7 +96,8 @@ class TestCameraPreflight(unittest.TestCase):
                 self.assertFalse(report["effective"]["device_runtime_verified"])
 
     def test_missing_selected_checkpoint_is_fail(self):
-        (self.root / "ai_training/models/best_behavior_v1_4.pt").unlink()
+        (self.root / "ai/behavior_detection/models/best_behavior_v1_4.pt").unlink()
+        self.write("ai_training/models/best_behavior_v1_4.pt", b"wrong checkpoint location")
         self.assertEqual(self.checks(self.run_check(), "model.behavior_selected")[0]["status"], "FAIL")
 
     def test_missing_alternative_checkpoint_is_warn(self):

@@ -39,7 +39,8 @@ def production_tracker_policy():
         raise ValueError("Cannot uniquely read existing Camera Live PersonTracker policy")
     values = {kw.arg: ast.literal_eval(constants[kw.value.id] if isinstance(kw.value, ast.Name) else kw.value)
               for kw in calls[0].keywords}
-    if set(values) != {"iou_threshold", "max_age", "keep_unmatched"}:
+    if set(values) not in ({"iou_threshold", "max_age", "keep_unmatched"},
+                           {"iou_threshold", "max_age", "keep_unmatched", "motion_matching"}):
         raise ValueError("Unknown Camera Live tracker policy shape; no settings guessed")
     return values
 

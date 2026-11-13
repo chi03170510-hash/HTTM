@@ -2,7 +2,7 @@
 """
 HTTM - Detector Adapter
 
-Default model: YOLO11n Round 3 (best.pt)
+Default model: best_behavior_v1_4.pt
 Supported behaviors:
     0 - sleeping
     1 - using_phone
@@ -12,14 +12,12 @@ Converts BehaviorDetector output into integration events.
 
 from pathlib import Path
 
-from ..behavior_detector import BehaviorDetector
+from ..behavior_detector import BehaviorDetector, DEFAULT_MODEL_PATH
 from ..diagnostics import emit_debug
 from .event_schema import DetectionEvent, FrameResult
 
 
-BASE_DIR = Path(__file__).resolve().parents[1]
-
-DEFAULT_CHECKPOINT = BASE_DIR / "models" / "best.pt"
+DEFAULT_CHECKPOINT = DEFAULT_MODEL_PATH
 
 SUPPORTED_BEHAVIORS = {
     0: "sleeping",

@@ -364,13 +364,13 @@ class TestCH20DurationPipeline(unittest.TestCase):
                 self.assertFalse(trace.results[2]["behavior_frame"].timestamp_valid)
                 self.assert_phone(trace, [0., 1.5, None, 0.])
 
-    def test_absent_person_returns_with_new_id_and_zero_duration(self):
+    def test_briefly_absent_person_keeps_id_but_restarts_duration(self):
         observations = detected_sequence()
         observations[2] = observation(3, 103., present=False)
         trace = self.run_scenario(observations)
         self.assertEqual(trace.results[2]["tracked_people"], [])
         self.assertEqual(trace.results[2]["behavior_frame"].people, ())
-        self.assertEqual(trace.results[3]["tracked_people"][0]["track_id"], "P2")
+        self.assertEqual(trace.results[3]["tracked_people"][0]["track_id"], "P1")
         self.assertEqual(phone_value(trace.results[3]), 0.)
         last = next(s for s in trace.samples if s.observation_index == 3)
         self.assertIn("Using Phone: detected ~0.0s", last.labels)

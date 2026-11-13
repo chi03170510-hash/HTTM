@@ -177,14 +177,42 @@ class TestCameraPersonTracking(unittest.TestCase):
         self.assertEqual(logs[2]["frame_id"], 9)
         self.assertAlmostEqual(logs[2]["updated_at"] - logs[1]["updated_at"], 3.6518105)
 
-    def test_person_returns_after_observed_absence_gets_new_id(self):
+    def test_person_returns_after_brief_observed_absence_keeps_id(self):
         frame = ([{"person_ref": "person_0", "bbox_xyxy": [0, 0, 100, 200]}], [])
         results, _ = self.run_frames([frame, ([], []), frame])
         self.assertEqual(results[0]["tracked_people"][0]["track_id"], "P1")
         self.assertEqual(results[1]["tracked_people"], [])
-        self.assertEqual(results[2]["tracked_people"][0]["track_id"], "P2")
+        self.assertEqual(results[2]["tracked_people"][0]["track_id"], "P1")
 
-    def test_two_people_slow_pipeline_retires_only_missing_track(self):
+    def test_live_crossing_keeps_anonymous_ids_without_any_faces(self):
+        frames = []
+        for index, (a, b) in enumerate(((0, 140), (30, 110), (60, 80), (100, 40), (130, 10))):
+            people = [
+                {"person_ref": f"a_{index}", "bbox_xyxy": [a, 0, a + 100, 200]},
+                {"person_ref": f"b_{index}", "bbox_xyxy": [b, 0, b + 100, 200]},
+            ]
+            if index % 2:
+                people.reverse()
+            frames.append((people, []))
+        results, _ = self.run_frames(frames)
+        for index, result in enumerate(results):
+            self.assertEqual({p["person_ref"]: p["track_id"] for p in result["tracked_people"]},
+                             {f"a_{index}": "P1", f"b_{index}": "P2"})
+            self.assertEqual(result["matches"], [])
+
+    def test_live_occlusion_emits_no_ghost_and_ends_behavior_episode(self):
+        face = [{"face_bbox": [20, 20, 60, 60], "student_id": "SYNTHETIC_001", "score": .9}]
+        detection = [{"person_ref": "a", "bbox_xyxy": [0, 0, 100, 200],
+                      "behaviors": {"using_phone": {"state": "detected"}}}]
+        results, _ = self.run_frames([(detection, face), (detection, face),
+                                     ([], []), (detection, face)])
+        self.assertEqual(results[2]["tracked_people"], [])
+        self.assertEqual(results[2]["behavior_frame"].people, ())
+        self.assertEqual(results[3]["tracked_people"][0]["track_id"], "P1")
+        self.assertEqual(results[1]["behavior_frame"].people[0].behaviors[1].estimated_seconds, 1.)
+        self.assertEqual(results[3]["behavior_frame"].people[0].behaviors[1].estimated_seconds, 0.)
+
+    def test_two_people_slow_pipeline_expires_missing_track(self):
         left = {"person_ref": "left", "bbox_xyxy": [0, 0, 100, 200]}
         right = {"person_ref": "right", "bbox_xyxy": [200, 0, 300, 200]}
         replacement = {"person_ref": "new_left", "bbox_xyxy": [0, 0, 100, 200]}
