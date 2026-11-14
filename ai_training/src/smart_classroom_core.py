@@ -25,6 +25,37 @@ OUTER_ROOT = HTTM_ROOT.parent
 CONFIDENCE_THRESHOLD = 0.35
 BEHAVIOR_CONFIDENCE_THRESHOLD = 0.15
 OBJECT_CUE_CONFIDENCE_THRESHOLD = 0.15
+# Conservative starting threshold, not a calibrated probability of sleeping.
+SLEEPING_CONFIDENCE_THRESHOLD = 0.50
+
+
+def _match_sleeping_person(behavior: dict, persons: list[dict]) -> int | None:
+    """Assign a sleeping box to one clear person, never to every hidden face."""
+    box = behavior["bbox"]
+    area = _bbox_area(box)
+    cx = (box[0] + box[2]) * 0.5
+    cy = (box[1] + box[3]) * 0.5
+    matches = []
+    for index, person in enumerate(persons):
+        p_box = person["bbox"]
+        p_area = _bbox_area(p_box)
+        if p_area <= 0.0:
+            continue
+        if not (p_box[0] <= cx <= p_box[2] and p_box[1] <= cy <= p_box[3]):
+            continue
+        if not (0.10 <= area / p_area <= 2.50):
+            continue
+        if _bbox_overlap_ratio(box, p_box) < 0.50:
+            continue
+        matches.append((_bbox_iou(box, p_box), index))
+    matches.sort(reverse=True)
+    if not matches:
+        return None
+    # Ambiguous overlap is not evidence for either student.
+    if len(matches) > 1 and matches[0][0] - matches[1][0] < 0.05:
+        return None
+    return matches[0][1]
+
 IMG_SIZE = 640
 
 CLASSROOM_OBJECT_ALLOWLIST = {
@@ -37,7 +68,6 @@ CLASSROOM_OBJECT_ALLOWLIST = {
     "cell phone": "Cell Phone",
     "phone": "Cell Phone",
     "book": "Book",
-    "backpack": "Backpack",
     "bottle": "Bottle",
     "cup": "Cup",
     "clock": "Clock",
@@ -604,10 +634,11 @@ class BehaviorDetector:
 
         if not persons:
             for beh in primary_behaviors:
-                if beh["confidence"] >= max(self.conf_thresh, 0.22):
+                # Without a person box, sleeping cannot be attributed safely.
+                if beh["class_id"] != 1 and beh["confidence"] >= max(self.conf_thresh, 0.22):
                     candidates.append(beh)
             for beh in aux_behaviors:
-                if beh["confidence"] >= 0.35:
+                if beh["class_id"] != 1 and beh["confidence"] >= 0.35:
                     candidates.append(beh)
             for phone in phones:
                 if phone["confidence"] >= 0.20:
@@ -631,7 +662,18 @@ class BehaviorDetector:
         frame_area = max(float(h * w), 1.0)
         max_person_area = max((_bbox_area(p["bbox"]) for p in persons), default=1.0)
 
-        for person in persons:
+        sleeping_by_person: dict[int, float] = {}
+        for beh in primary_behaviors + aux_behaviors:
+            if beh["class_id"] != 1:
+                continue
+            confidence = float(beh["confidence"])
+            if confidence < max(self.conf_thresh, SLEEPING_CONFIDENCE_THRESHOLD):
+                continue
+            owner = _match_sleeping_person(beh, persons)
+            if owner is not None:
+                sleeping_by_person[owner] = max(sleeping_by_person.get(owner, 0.0), confidence)
+
+        for person_index, person in enumerate(persons):
             p_box = person["bbox"]
             p_area = max(_bbox_area(p_box), 1.0)
             # Skip tiny background/reflection person boxes when a prominent foreground person is present
@@ -733,67 +775,25 @@ class BehaviorDetector:
                     "bbox": list(p_box),
                 })
 
-            # --- 3. SLEEPING CUES (class_id = 1) - Focus on bending over / slumping (ignore eye blinking) ---
+            # --- 3. SLEEPING (class_id = 1) ---
+            # Hidden faces, head tilt and wide torso boxes are also common while
+            # writing/reading. They must never generate a sleeping detection.
             if not has_phone and not has_eating:
-                best_sleeping_conf = 0.0
+                best_sleeping_conf = sleeping_by_person.get(person_index, 0.0)
                 upright_head = False
                 face_hidden = True
-
                 if face_feat is not None:
-                    eyes_valid = bool(face_feat.get("eyes_valid"))
                     pose = face_feat.get("head_pose") or {}
-                    pose_valid = bool(pose.get("valid"))
-                    roll_deg = abs(float(pose.get("roll_deg") or 0.0)) if pose_valid else 0.0
-                    pitch_deg = abs(float(pose.get("pitch_deg") or 0.0)) if pose_valid else 0.0
-                    mc = face_feat.get("mouth_center_xy")
-                    mc_rel_y = ((float(mc[1]) - py1) / ph) if (mc is not None and ph > 1.0) else 0.5
+                    face_hidden = not (face_feat.get("eyes_valid") or pose.get("valid"))
+                    if pose.get("valid"):
+                        roll_deg = abs(float(pose.get("roll_deg") or 0.0))
+                        pitch_deg = abs(float(pose.get("pitch_deg") or 0.0))
+                        mc = face_feat.get("mouth_center_xy")
+                        mc_rel_y = ((float(mc[1]) - py1) / ph) if mc is not None else 0.5
+                        upright_head = roll_deg < 19.0 and pitch_deg < 19.0 and mc_rel_y < 0.74
 
-                    if eyes_valid or pose_valid:
-                        face_hidden = False
-
-                    # Sitting upright (even if blinking/closing eyes) -> never trigger Sleeping
-                    if pose_valid and roll_deg < 19.0 and pitch_deg < 19.0 and mc_rel_y < 0.74:
-                        upright_head = True
-
-                    # Slumped / bent head posture (strong head drop/roll or low head position on desk)
-                    if pose_valid and not upright_head:
-                        if roll_deg >= 45.0 or pitch_deg >= 45.0:
-                            tilt_score = max(roll_deg - 45.0, pitch_deg - 45.0, 0.0)
-                            pose_conf = min(0.94, 0.65 + tilt_score * 0.02)
-                            best_sleeping_conf = max(best_sleeping_conf, pose_conf)
-                        elif (roll_deg >= 15.0 or pitch_deg >= 15.0) and mc_rel_y >= 0.74:
-                            best_sleeping_conf = max(best_sleeping_conf, 0.72)
-
-                # Torso bent-over geometry when upright face is hidden (buried on desk / folded arms)
-                aspect_ratio = pw / ph
-                if (
-                    face_hidden
-                    and p_area >= 0.22 * frame_area
-                    and py1 >= 0.32 * h
-                    and py2 >= 0.88 * h
-                    and aspect_ratio >= 1.38
-                ):
-                    slump_conf = min(0.90, 0.64 + (aspect_ratio - 1.38) * 0.35)
-                    best_sleeping_conf = max(best_sleeping_conf, slump_conf)
-
-                for beh in aux_behaviors:
-                    if beh["class_id"] == 1 and beh["confidence"] >= 0.22 and not upright_head:
-                        if (
-                            _bbox_overlap_ratio(beh["bbox"], exp_p_box) >= 0.30
-                            or _bbox_iou(beh["bbox"], p_box) >= 0.20
-                        ):
-                            boosted = min(0.94, max(float(beh["confidence"]) + 0.30, 0.60))
-                            best_sleeping_conf = max(best_sleeping_conf, boosted)
-
-                for beh in primary_behaviors:
-                    if beh["class_id"] == 1 and beh["confidence"] >= 0.12 and not upright_head:
-                        overlap = _bbox_overlap_ratio(beh["bbox"], exp_p_box)
-                        area_ratio = _bbox_area(beh["bbox"]) / p_area
-                        if (overlap >= 0.30 and area_ratio >= 0.10) or (face_hidden and beh["confidence"] >= 0.12):
-                            boosted = min(0.90, max(float(beh["confidence"]) + 0.40, 0.58))
-                            best_sleeping_conf = max(best_sleeping_conf, boosted)
-
-                if best_sleeping_conf > 0.0:
+                # Keep the model's score unchanged; pose can veto, not boost it.
+                if best_sleeping_conf > 0.0 and not upright_head:
                     candidates.append({
                         "class_id": 1,
                         "class_name": "Sleeping",

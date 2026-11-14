@@ -1,4 +1,4 @@
-z"""Tests for AI-Smart-Classroom-Monitoring-System core integration into HTTM Camera Live."""
+"""Tests for AI-Smart-Classroom-Monitoring-System core integration into HTTM Camera Live."""
 
 import os
 import queue
@@ -54,6 +54,32 @@ class TestBehaviorCheckpoint(unittest.TestCase):
 
 @unittest.skipUnless(HAS_ULTRALYTICS, "ultralytics is installed in .venv-hybrid")
 class TestSmartClassroomCore(unittest.TestCase):
+    def test_backpack_is_filtered_without_removing_other_objects(self):
+        from src.smart_classroom_core import ObjectDetector
+
+        detector = ObjectDetector.__new__(ObjectDetector)
+        detector.conf_thresh = 0.35
+        detector.cue_conf_thresh = 0.15
+        detector.imgsz = 640
+        detector.device = "cpu"
+        boxes = []
+        for class_id in (0, 24, 67):  # COCO person, backpack, cell phone
+            box = Mock()
+            box.cls = np.array([class_id])
+            box.conf = np.array([0.90])
+            box.xyxy = np.array([[20, 30, 120, 200]])
+            boxes.append(box)
+        detector.model = Mock()
+        detector.model.predict.return_value = [Mock(
+            boxes=boxes, names={0: "person", 24: "backpack", 67: "cell phone"},
+        )]
+
+        result = detector.detect(np.zeros((480, 640, 3), dtype=np.uint8))
+        self.assertEqual([item["class_name"] for item in result["detections"]],
+                         ["Person", "Cell Phone"])
+        self.assertEqual(result["occupancy"], 1)
+        self.assertEqual(len(result["raw_cues"]["phones"]), 1)
+
     def test_pipeline_loads_and_runs_with_3_classes(self):
         from src.smart_classroom_core import BEHAVIOR_CLASSES, UnifiedPipeline
 
@@ -72,6 +98,81 @@ class TestSmartClassroomCore(unittest.TestCase):
         self.assertIn("behaviors", result)
         self.assertIn("occupancy", result)
         self.assertEqual(result["annotated_frame"].shape, frame.shape)
+
+
+@unittest.skipUnless(HAS_ULTRALYTICS, "ultralytics is installed in .venv-hybrid")
+class TestSleepingFusion(unittest.TestCase):
+    def setUp(self):
+        from src.smart_classroom_core import BehaviorDetector
+
+        # Exercise fusion without loading weights or accessing a camera.
+        self.detector = BehaviorDetector.__new__(BehaviorDetector)
+        self.detector.conf_thresh = 0.15
+        self.detector._extract_person_face_features = Mock(return_value=None)
+        self.detector._extract_person_pose_turn = Mock(return_value=None)
+        self.frame = np.zeros((480, 640, 3), dtype=np.uint8)
+        self.persons = [{"bbox": [20, 40, 160, 300]}, {"bbox": [300, 40, 440, 300]}]
+
+    def sleeping(self, bbox, confidence=0.76):
+        return {"class_id": 1, "class_name": "Sleeping", "confidence": confidence, "bbox": bbox}
+
+    def fuse(self, primary=(), aux=(), persons=None):
+        return self.detector._fuse_behavior_cues(
+            self.frame, list(primary), list(aux),
+            {"persons": self.persons if persons is None else persons},
+        )
+
+    def test_one_prediction_does_not_spread_to_hidden_faces(self):
+        for auxiliary in (False, True):
+            with self.subTest(auxiliary=auxiliary):
+                detections = [self.sleeping([25, 45, 155, 295])]
+                result = self.fuse(aux=detections) if auxiliary else self.fuse(primary=detections)
+                self.assertEqual(len(result), 1)
+                self.assertEqual(result[0]["bbox"], self.persons[0]["bbox"])
+                self.assertEqual(result[0]["confidence"], 0.76)
+
+    def test_low_confidence_is_not_boosted(self):
+        detection = self.sleeping(self.persons[0]["bbox"], 0.36)
+        self.assertEqual(self.fuse(primary=[detection], aux=[detection]), [])
+
+    def test_unrelated_box_is_not_assigned(self):
+        self.assertEqual(self.fuse(primary=[self.sleeping([480, 40, 620, 300])]), [])
+
+    def test_ambiguous_overlap_is_rejected(self):
+        persons = [{"bbox": [20, 40, 160, 300]}, {"bbox": [30, 40, 170, 300]}]
+        self.assertEqual(self.fuse(primary=[self.sleeping([25, 40, 165, 300])], persons=persons), [])
+
+    def test_two_separate_sleepers_keep_original_scores(self):
+        result = self.fuse(primary=[self.sleeping(p["bbox"], 0.61 + i * 0.1)
+                                    for i, p in enumerate(self.persons)])
+        self.assertEqual(len(result), 2)
+        self.assertEqual(sorted(r["confidence"] for r in result), [0.61, 0.71])
+
+    def test_head_tilt_and_hidden_wide_torso_do_not_generate_sleeping(self):
+        persons = [{"bbox": [0, 160, 640, 480]}]
+        self.assertEqual(self.fuse(persons=persons), [])
+        self.detector._extract_person_face_features.return_value = {
+            "head_pose": {"valid": True, "pitch_deg": 60, "roll_deg": 0},
+        }
+        self.assertEqual(self.fuse(persons=persons), [])
+
+    def test_upright_head_vetoes_sleeping(self):
+        self.detector._extract_person_face_features.return_value = {
+            "head_pose": {"valid": True, "pitch_deg": 0, "roll_deg": 0},
+        }
+        self.assertEqual(self.fuse(primary=[self.sleeping(self.persons[0]["bbox"])]), [])
+
+    def test_turning_still_works_with_sleeping_fusion(self):
+        self.detector._extract_person_face_features.return_value = {
+            "head_pose": {"valid": True, "pitch_deg": 0, "roll_deg": 0, "yaw_deg": 35},
+        }
+        result = self.fuse(persons=[self.persons[0]])
+        self.assertEqual([item["class_name"] for item in result], ["Turning / Talking"])
+        self.detector._extract_person_pose_turn.assert_not_called()
+
+    def test_no_person_means_no_sleeping_attribution(self):
+        detection = self.sleeping([20, 40, 160, 300])
+        self.assertEqual(self.fuse(primary=[detection], aux=[detection], persons=[]), [])
 
 
 class TestLiveBBoxOverlay(unittest.TestCase):

@@ -1,4 +1,4 @@
-import json
+﻿import json
 import queue
 import subprocess
 import sys
@@ -12,7 +12,7 @@ import cv2
 INTEGRATION = Path(__file__).resolve().parent
 ROOT = INTEGRATION.parents[1]
 
-CAMERA_INDEX = 0
+CAMERA_INDEX = 1
 MAX_FRAMES = 10
 WORKER_TIMEOUT = 90
 
