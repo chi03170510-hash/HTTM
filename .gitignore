@@ -261,6 +261,7 @@ ai/behavior_detection/video_results/
 !ai/behavior_detection/models/best_behavior_v1_4.pt
 !ai_training/models/behavior_yolo.pt
 !ai_training/models/yolov8n.pt
+!ai_training/models/behavior_train_run/**
 
 # Camera logs and screenshots
 ai/behavior_detection/logs/
